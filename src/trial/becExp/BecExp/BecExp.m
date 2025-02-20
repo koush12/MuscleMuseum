@@ -81,7 +81,7 @@ classdef BecExp < Trial
             end
 
             % Acquisition settings
-            obj.Acquisition = Acquisition(obj.ConfigParameter.AcquisitionName);
+            obj.Acquisition = getAcq(obj.ConfigParameter.AcquisitionName);
             obj.Acquisition.ImagePath = obj.DataPath;
             obj.Acquisition.ImageFormat = obj.DataFormat;
             obj.Acquisition.ImagePrefix = obj.DataPrefix;
@@ -279,6 +279,7 @@ classdef BecExp < Trial
                             obj.Od.FringeRemovalMethod = obj.ConfigParameter.FringeRemovalMethod;
                         case "Imaging"
                             obj.Imaging.ImagingStage = obj.ConfigParameter.ImagingStage;
+                            obj.Imaging.ImagingMethod = obj.ConfigParameter.ImagingMethod;
                         case "Ad"
                             obj.Ad.AdMethod = obj.ConfigParameter.AdMethod;
                             obj.Ad.CLim = [0,obj.ConfigParameter.AdCLim];
@@ -340,8 +341,15 @@ classdef BecExp < Trial
 
             if obj.IsAutoAcquire
                 obj.Acquisition.connectCamera;
-                obj.Acquisition.setCameraParameter;
-                obj.Acquisition.setCallback(@(src,evt) saveBecImage(src,evt,obj));
+                switch obj.Imaging.ImagingMethod
+                    case  "Absorption"
+                        obj.Acquisition.setCameraParameterAbsorption;
+                        obj.Acquisition.setCallback(@(src,evt) saveBecImageAbsorption(src,evt,obj));
+                    case "Dispersive"
+
+                    case "Fluorescence"
+
+                end
                 obj.Acquisition.startCamera;
             else
                 obj.createWatcher;

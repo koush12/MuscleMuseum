@@ -9,10 +9,12 @@ classdef Imaging < BecAnalysis
         ImagingTime double = []
         ImagingTimeUnit string
         QuantumEfficiency double = 1 %read from the camera specs
+        Transmission double = 1 %read from the camera specs
     end
 
     properties
         ImagingStage string = "LF" % LF:low-field. HF:high-field. NI:non-inter
+        ImagingMethod string = "Absorption"
     end
 
     properties (SetAccess = protected, Hidden)
@@ -55,6 +57,9 @@ classdef Imaging < BecAnalysis
 
             % Quantum efficiency
             obj.QuantumEfficiency = becExp.Acquisition.QuantumEfficiency(lambda);
+
+            % Transmission
+            obj.Transmission = becExp.Acquisition.Transmission;
         end
 
         function initialize(obj)
@@ -99,17 +104,17 @@ classdef Imaging < BecAnalysis
         function updateData(obj,runIdx)
             becExp = obj.BecExp;
             roiData = squeeze(becExp.Od.RoiData(:,:,runIdx,:));
-            qe = obj.QuantumEfficiency;
+            eff = obj.QuantumEfficiency * obj.Transmission;
             pf = obj.Prefactor;
-            atomData = roiData(:,:,1)/qe;
-            lightData = roiData(:,:,2)/qe;
-            darkData = roiData(:,:,3)/qe;
+            atomData = roiData(:,:,1)/eff;
+            lightData = roiData(:,:,2)/eff;
+            darkData = roiData(:,:,3)/eff;
             obj.LightMean(runIdx) = mean(lightData(:));
             obj.DarkMean(runIdx) = mean(darkData(:));
             t = becExp.CiceroData.t_image(runIdx);
             obj.ImagingTime(runIdx) = t;
             obj.SaturationParameterMean(runIdx) = pf * (obj.LightMean(runIdx) - obj.DarkMean(runIdx)) / t;
-            obj.SaturationParameterPropagation(:,:,runIdx) = pf * (atomData + becExp.Od.CameraLightData(:,:,runIdx) / qe) / 2 / t;
+            obj.SaturationParameterPropagation(:,:,runIdx) = pf * (atomData + becExp.Od.CameraLightData(:,:,runIdx) / eff) / 2 / t;
         end
 
         function updateFigure(obj,~)
@@ -147,7 +152,8 @@ classdef Imaging < BecAnalysis
             l(1).YNegativeDelta = stdSat;
             l(1).YPositiveDelta = stdSat;
 
-            title(ax(2),obj.ImagingStage + " Imaging. First run $t_{\mathrm{image}}=" + num2str(obj.ImagingTime(1)) + "~\mathrm{" + ...
+            title(ax(2),obj.ImagingStage + " " + obj.ImagingMethod + ...
+                ". First run $t_{\mathrm{image}}=" + num2str(obj.ImagingTime(1)) + "~\mathrm{" + ...
                 obj.ImagingTimeUnit + "}.~\bar{s} = " + num2str(obj.SaturationParameterMeanOverall) + "$",...
                 Interpreter="latex")
         end

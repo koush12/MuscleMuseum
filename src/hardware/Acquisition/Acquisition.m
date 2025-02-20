@@ -5,15 +5,17 @@ classdef Acquisition < handle & matlab.mixin.SetGetExactNames
     properties (SetAccess = protected)
         Name string %Nickname/label of the acquisition
         CameraType string %Producer of the camera
+        CameraModel string %Model of the camera
         AdaptorName string %MATLAB camera adaptor
         DeviceID int32 %To distinguish devices if multiple devices are connected through the same adaptor
         SerialNumber int32 %Camera serial number
         PixelSize double %In microns
-        ImageSize uint32 % size x * size y
-        BitsPerSample int16 % How many bits per pixel
-        BadRow uint32 % rows that have bad pixels
-        BadColumn uint32 % columns that have bad pixels
-        Magnification double
+        ImageSize uint32 %size x * size y
+        BitsPerSample int16 %How many bits per pixel
+        BadRow uint32 %rows that have bad pixels
+        BadColumn uint32 %columns that have bad pixels
+        Magnification double %Manification of the optical system
+        Transmission double = 1 %Transmission of the optical system
         ConfigFun function_handle %Configure the camera parameters. Must be pre-defined.
         QuantumEfficiencyData double = [] %Quantum efficiency data from the company. First column: wavelength. Second column: quantum efficiency.
     end

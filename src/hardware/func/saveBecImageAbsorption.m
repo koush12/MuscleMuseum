@@ -1,4 +1,4 @@
-function saveBecImage(vid,~,becExp)
+function saveBecImageAbsorption(vid,~,becExp)
 % saveBecImage saves acquired becExp images to drives and trigger the
 % becExp's "NewRunFinished" event.
 %
