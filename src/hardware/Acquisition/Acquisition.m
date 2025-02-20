@@ -10,7 +10,7 @@ classdef Acquisition < handle & matlab.mixin.SetGetExactNames
         DeviceID int32 %To distinguish devices if multiple devices are connected through the same adaptor
         SerialNumber int32 %Camera serial number
         PixelSize double %In microns
-        ImageSize uint32 %size x * size y
+        ImageSize uint32 %size y * size x
         BitsPerSample int16 %How many bits per pixel
         BadRow uint32 %rows that have bad pixels
         BadColumn uint32 %columns that have bad pixels

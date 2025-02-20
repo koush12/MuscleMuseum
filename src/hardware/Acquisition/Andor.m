@@ -6,7 +6,10 @@ classdef Andor < Acquisition
     %   Requires modification of code since there is a proprietary SDK for
     %   Andor in contrast to the other cameras that can be accessed through
     %   the VideoInput class.
-
+    properties (SetAccess=protected)
+        CallbackFunc function_handle
+        Future
+    end
 
     methods
         function obj = Andor(acqName)
@@ -30,8 +33,6 @@ classdef Andor < Acquisition
                     ME.message];
                 error(msg)
             end
-            % obj.VideoInput = vid; %No videoinput object compatible with
-            % it.
         end
 
         function setCameraParameterAbsorption(obj)
@@ -66,44 +67,57 @@ classdef Andor < Acquisition
             CheckWarning(ret);
             [ret]=SetImage(1, 1, 1, XPixels, 1, YPixels); %   Set the image size
             CheckWarning(ret);
-            [ret]=SetEMCCDGain(gain);                        %   Set EMCCD gain
+            [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
             CheckWarning(ret);
         end
 
-        function setCallback(obj,callbackFunc) %%% Do not use for Acquisition_Andor, we shall for now disable AutoAcquire until this is figured out.
+        function setCallback(obj,callbackFunc)
             %Set camera callback function.
-            % if isempty(obj.VideoInput)
-            %     error('Camera not connected. Try the "connectCamera" method first.')
-            % end
-            % vid = obj.VideoInput;
-            % vid.FramesAcquiredFcn = callbackFunc;
+            obj.CallbackFunc = callbackFunc;
         end
 
         function startCamera(obj)
             %Start camera recording
-            % if isempty(obj.VideoInput)
-            %     error('Camera not connected. Try the "connectCamera" method first.')
-            % end
             [ret] = StartAcquisition();
             CheckWarning(ret);
+
+            p = gcp('nocreate');
+            if isempty(p)
+                p = parpool(1);
+            end
+            obj.Future = parfeval(p,@andorLoop,obj.ImageGroupSize,obj.CallbackFunc);
+
+            function andorLoop(groupSize,callbackFunc)
+                while(1)
+                    pause(0.1)
+                    % Setting this return value to avoid evaluation of the "if" statement
+                    % for saving a new image if there is no new image.
+                    atmcd.DRV_NO_NEW_DATA;
+
+                    % Find "first" which is the index for the oldest image in the buffer.
+                    % Updates when GetImages is called, but after having gotten all the
+                    % images, it returns first = last = "the newest image that exists" even
+                    % if the "newest image" in the buffer was already retreived.
+                    [~, firstIndex, lastIndex] = GetNumberNewImages();
+                    if (lastIndex - firstIndex) == groupSize
+                        callbackFunc([],[])
+                    end
+                end
+            end
         end
 
         function pauseCamera(obj)
             %Pause camera recording
-            % vid = obj.VideoInput;
-            % stop(vid);
-
             [ret] = AbortAcquisition();
             CheckWarning(ret);
         end
 
         function stopCamera(obj)
             %Stop camera recording
-            % vid = obj.VideoInput;
-            % stop(vid);
-            % delete(vid);
-            % clear vid;
+            cancel(obj.Future)
             [ret] = AbortAcquisition();
+            CheckWarning(ret);
+            [ret]=SetShutter(1, 2, 1, 1);
             CheckWarning(ret);
             [ret] = AndorShutDown();
             CheckWarning(ret);

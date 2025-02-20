@@ -12,7 +12,21 @@ function saveBecImageAbsorption(vid,~,becExp)
 becExp.IsAcquiring = true;
 
 %% Get data from camera
-mData = getdata(vid,3);
+if ~isempty(vid)
+    mData = getdata(vid,3);
+else
+    % This is for Andor
+    XPixels = becExp.Acquisition.ImageSize(2);
+    YPixels = becExp.Acquisition.ImageSize(1);
+    groupSize = becExp.Acquisition.ImageGroupSize;
+    [~, firstIndex, lastIndex] = GetNumberNewImages();
+    [~, mData, ~, ~] = GetImages(firstIndex, lastIndex, ...
+        prod([XPixels,YPixels,groupSize]));
+    mData = reshape(mData, XPixels, YPixels, groupSize);
+    for ii = 1:groupSize
+        mData(:,:,ii) = flip(transpose(mData(:,:,ii)),1);
+    end
+end
 
 %% Name the data
 nn = num2str(becExp.NCompletedRun + 1);
