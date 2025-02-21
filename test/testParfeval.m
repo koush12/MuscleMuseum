@@ -2,8 +2,8 @@
 a = 1;
 y = SineWave;
 atom = Alkali("Lithium7");
-pool = parpool(1);
-f = parfeval(pool,@andorLoop,0,@(x) callbackFunc(x,atom));
+% pool = parpool(1);
+f = parfeval(@andorLoop,0,@(x) callbackFunc(x,atom));
 
 
 function andorLoop(callbackFunc)
