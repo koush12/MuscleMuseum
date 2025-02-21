@@ -38,6 +38,65 @@ classdef Andor < Acquisition
         function setCameraParameterAbsorption(obj)
             %Set camera parameters using the predefined configuration
             %functions.
+            % ret=AndorInitialize('');
+            % CheckError(ret);
+            % 
+            % %% Set Cooling Settings
+            % [ret]=SetCoolerMode(1);                       % Camera temperature is maintained on ShutDown
+            % CheckWarning(ret);
+            % [ret]=CoolerON();                             %   Turn on temperature cooler
+            % CheckWarning(ret);
+            % [ret]=SetAcquisitionMode(3);                  %   Set acquisition mode; 3 for Kinetic Series
+            % CheckWarning(ret);
+            % 
+            % %% Set Imaging Settings
+            % frameCount = 3;
+            % obj.ImageGroupSize = frameCount;
+            % obj.IsExternalTriggered = true;
+            % 
+            % [ret]=SetNumberKinetics(frameCount * 500);
+            % CheckWarning(ret);
+            % [ret]=SetExposureTime(obj.ExposureTime);                  %   Set exposure time in second  THIS IS THE USUAL VALUE
+            % CheckWarning(ret);
+            % % [ret]=SetExposureTime(0.1);                  %   TESTING EXPOSURE SETTING
+            % % CheckWarning(ret);
+            % [ret]=SetReadMode(4);                         %   Set read mode; 4 for Image
+            % CheckWarning(ret);
+            % [ret]=SetTriggerMode(1);                      %   Set internal trigger mode
+            % CheckWarning(ret);
+            % [ret]=SetShutter(1, 1, 0, 0);                 %   Open Shutter
+            % CheckWarning(ret);
+            % [ret,XPixels, YPixels]=GetDetector;           %   Get the CCD size
+            % CheckWarning(ret);
+            % [ret]=SetImage(1, 1, 1, XPixels, 1, YPixels); %   Set the image size
+            % CheckWarning(ret);
+            % [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
+            % CheckWarning(ret);
+        end
+
+        function setCallback(obj,callbackFunc)
+            %Set camera callback function.
+            obj.CallbackFunc = callbackFunc;
+        end
+
+        function startCamera(obj)
+            %Start camera recording
+            % [ret] = StartAcquisition();
+            % CheckWarning(ret);
+
+            p = gcp('nocreate');
+            if isempty(p)
+                p = parpool(1);
+            end
+            obj.Future = parfeval(p,@andorLoop,0,obj.ImageGroupSize,obj.CallbackFunc);
+            [ret] = AndorShutDown();
+            % CheckWarning(ret);
+
+            function andorLoop(groupSize,callbackFunc)
+
+                ret=AndorInitialize('');
+            CheckError(ret);
+            
             %% Set Cooling Settings
             [ret]=SetCoolerMode(1);                       % Camera temperature is maintained on ShutDown
             CheckWarning(ret);
@@ -48,12 +107,12 @@ classdef Andor < Acquisition
 
             %% Set Imaging Settings
             frameCount = 3;
-            obj.ImageGroupSize = frameCount;
-            obj.IsExternalTriggered = true;
+            % obj.ImageGroupSize = frameCount;
+            % obj.IsExternalTriggered = true;
 
-            [ret]=SetNumberKinetics(frameCount);
+            [ret]=SetNumberKinetics(frameCount * 500);
             CheckWarning(ret);
-            [ret]=SetExposureTime(obj.ExposureTime);                  %   Set exposure time in second  THIS IS THE USUAL VALUE
+            % [ret]=SetExposureTime(obj.ExposureTime);                  %   Set exposure time in second  THIS IS THE USUAL VALUE
             CheckWarning(ret);
             % [ret]=SetExposureTime(0.1);                  %   TESTING EXPOSURE SETTING
             % CheckWarning(ret);
@@ -69,27 +128,12 @@ classdef Andor < Acquisition
             CheckWarning(ret);
             [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
             CheckWarning(ret);
-        end
 
-        function setCallback(obj,callbackFunc)
-            %Set camera callback function.
-            obj.CallbackFunc = callbackFunc;
-        end
-
-        function startCamera(obj)
-            %Start camera recording
-            [ret] = StartAcquisition();
+           [ret] = StartAcquisition();
             CheckWarning(ret);
 
-            p = gcp('nocreate');
-            if isempty(p)
-                p = parpool(1);
-            end
-            obj.Future = parfeval(p,@andorLoop,obj.ImageGroupSize,obj.CallbackFunc);
-
-            function andorLoop(groupSize,callbackFunc)
                 while(1)
-                    pause(0.1)
+                    pause(1)
                     % Setting this return value to avoid evaluation of the "if" statement
                     % for saving a new image if there is no new image.
                     atmcd.DRV_NO_NEW_DATA;
@@ -98,9 +142,12 @@ classdef Andor < Acquisition
                     % Updates when GetImages is called, but after having gotten all the
                     % images, it returns first = last = "the newest image that exists" even
                     % if the "newest image" in the buffer was already retreived.
-                    [~, firstIndex, lastIndex] = GetNumberNewImages();
-                    if (lastIndex - firstIndex) == groupSize
-                        callbackFunc([],[])
+                    [r, firstIndex, lastIndex] = GetNumberNewImages();
+                    % CheckError(r);
+                    save(string(firstIndex) + string(lastIndex),'firstIndex')
+                    if (lastIndex - firstIndex + 1) == groupSize
+                        % save("test",'firstIndex')
+                        % callbackFunc([],[]);
                     end
                 end
             end
