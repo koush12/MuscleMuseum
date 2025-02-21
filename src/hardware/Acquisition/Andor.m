@@ -8,7 +8,11 @@ classdef Andor < Acquisition
     %   the VideoInput class.
     properties (SetAccess=protected)
         CallbackFunc function_handle
-        Future
+        Future parallel.FevalFuture
+        ClientDataQueue parallel.pool.DataQueue
+        ClientQueue parallel.pool.PollableDataQueue
+        WorkerQueue parallel.pool.PollableDataQueue
+        ClientListener event.listener
     end
 
     methods
@@ -23,7 +27,76 @@ classdef Andor < Acquisition
         end
 
         function connectCamera(obj)
-            %Connect to the camera. Return the VideoInput object.
+            %Connect to the camera using parpool
+
+            % Create client queue
+            obj.ClientQueue = parallel.pool.PollableDataQueue;
+            obj.ClientDataQueue = parallel.pool.DataQueue;
+
+            % Run andor on the worker process
+            p = gcp('nocreate');
+            if isempty(p)
+                p = parpool(1);
+            end
+
+            obj.Future = parfeval(p,@(cq) obj.andorLoop(cq),0,obj.ClientQueue,obj.ClientDataQueue);
+
+            % Retrieve the worker queue from the worker
+            obj.WorkerQueue = poll(obj.ClientQueue,10);
+
+            % Check for errors
+            obj.checkError;
+        end
+
+        function setCameraParameterAbsorption(obj)
+            data.Message = "SetParameter";
+            data.AcquisitionMode = "Absorption";
+            data.ExposureTime = obj.ExposureTime;
+            obj.ImageGroupSize = 3;
+            send(obj.WorkerQueue,data);
+        end
+
+        function setCallback(obj,callbackFunc)
+            %Set camera callback function.
+            obj.ClientListener = afterEach(obj.ClientDataQueue,@(x) callbackFunc(x,[]));
+        end
+
+        function startCamera(obj)
+            %Start camera recording
+            data.Message = "Start";
+            send(obj.WorkerQueue,data);
+            obj.checkError;
+        end
+
+        function pauseCamera(obj)
+            %Pause camera recording
+            % [ret] = AbortAcquisition();
+            % CheckWarning(ret);
+        end
+
+        function stopCamera(obj)
+            %Stop camera recording
+            data.Message = "Stop";
+            send(obj.WorkerQueue,data);
+            obj.checkError;
+            cancel(obj.Future)
+            delete(obj.ClientListener)
+        end
+
+        function checkError(obj)
+            if ~isempty(obj.Future.Error)
+                obj.Future.Error.throw
+            end
+        end
+    end
+
+    methods (Static)
+        function andorLoop(cq,cdq)
+            % Send the worker queue to the client
+            wq = parallel.pool.PollableDataQueue;
+            send(cq,wq);
+
+            % Initialize the andor SDK libariry
             try
                 ret=AndorInitialize('');
                 CheckError(ret);
@@ -33,107 +106,61 @@ classdef Andor < Acquisition
                     ME.message];
                 error(msg)
             end
-        end
 
-        function setCameraParameterAbsorption(obj)
-            %Set camera parameters using the predefined configuration
-            %functions.
-            % ret=AndorInitialize('');
-            % CheckError(ret);
-            % 
-            % %% Set Cooling Settings
-            % [ret]=SetCoolerMode(1);                       % Camera temperature is maintained on ShutDown
-            % CheckWarning(ret);
-            % [ret]=CoolerON();                             %   Turn on temperature cooler
-            % CheckWarning(ret);
-            % [ret]=SetAcquisitionMode(3);                  %   Set acquisition mode; 3 for Kinetic Series
-            % CheckWarning(ret);
-            % 
-            % %% Set Imaging Settings
-            % frameCount = 3;
-            % obj.ImageGroupSize = frameCount;
-            % obj.IsExternalTriggered = true;
-            % 
-            % [ret]=SetNumberKinetics(frameCount * 500);
-            % CheckWarning(ret);
-            % [ret]=SetExposureTime(obj.ExposureTime);                  %   Set exposure time in second  THIS IS THE USUAL VALUE
-            % CheckWarning(ret);
-            % % [ret]=SetExposureTime(0.1);                  %   TESTING EXPOSURE SETTING
-            % % CheckWarning(ret);
-            % [ret]=SetReadMode(4);                         %   Set read mode; 4 for Image
-            % CheckWarning(ret);
-            % [ret]=SetTriggerMode(1);                      %   Set internal trigger mode
-            % CheckWarning(ret);
-            % [ret]=SetShutter(1, 1, 0, 0);                 %   Open Shutter
-            % CheckWarning(ret);
-            % [ret,XPixels, YPixels]=GetDetector;           %   Get the CCD size
-            % CheckWarning(ret);
-            % [ret]=SetImage(1, 1, 1, XPixels, 1, YPixels); %   Set the image size
-            % CheckWarning(ret);
-            % [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
-            % CheckWarning(ret);
-        end
+            % Initialize camera state identifier
+            isSet = false;
+            isAcq = false;
+            acqMode = "Absorption";
 
-        function setCallback(obj,callbackFunc)
-            %Set camera callback function.
-            obj.CallbackFunc = callbackFunc;
-        end
+            while true
+                pause(0.1)
+                if ~isSet
+                    [data,datarcvd] = poll(wq,10);
+                    if datarcvd && data.Message == "SetParameter"
+                        %% Set temperature
+                        [ret]=SetCoolerMode(1);     % Camera temperature is maintained on ShutDown
+                        CheckWarning(ret);
+                        [ret]=CoolerON();           %   Turn on temperature cooler
+                        CheckWarning(ret);
 
-        function startCamera(obj)
-            %Start camera recording
-            % [ret] = StartAcquisition();
-            % CheckWarning(ret);
+                        %% Set other parameters
+                        [ret]=SetExposureTime(data.ExposureTime);     %   Set exposure time in second  THIS IS THE USUAL VALUE
+                        CheckWarning(ret);
+                        [ret]=SetReadMode(4);                         %   Set read mode; 4 for Image
+                        CheckWarning(ret);
+                        [ret]=SetShutter(1, 1, 0, 0);                 %   Open Shutter
+                        CheckWarning(ret);
+                        [ret,XPixels, YPixels]=GetDetector;           %   Get the CCD size
+                        CheckWarning(ret);
+                        [ret]=SetImage(1, 1, 1, XPixels, 1, YPixels); %   Set the image size
+                        CheckWarning(ret);
+                        [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
+                        CheckWarning(ret);
 
-            p = gcp('nocreate');
-            if isempty(p)
-                p = parpool(1);
-            end
-            obj.Future = parfeval(p,@andorLoop,0,obj.ImageGroupSize,obj.CallbackFunc);
-            [ret] = AndorShutDown();
-            % CheckWarning(ret);
+                        %% Set acquisition mode
+                        switch data.AcquisitionMode
+                            case "Absorption"
+                                acqMode = "Absorption";
+                                groupSize = 3;
 
-            function andorLoop(groupSize,callbackFunc)
-
-                ret=AndorInitialize('');
-            CheckError(ret);
-            
-            %% Set Cooling Settings
-            [ret]=SetCoolerMode(1);                       % Camera temperature is maintained on ShutDown
-            CheckWarning(ret);
-            [ret]=CoolerON();                             %   Turn on temperature cooler
-            CheckWarning(ret);
-            [ret]=SetAcquisitionMode(3);                  %   Set acquisition mode; 3 for Kinetic Series
-            CheckWarning(ret);
-
-            %% Set Imaging Settings
-            frameCount = 3;
-            % obj.ImageGroupSize = frameCount;
-            % obj.IsExternalTriggered = true;
-
-            [ret]=SetNumberKinetics(frameCount * 500);
-            CheckWarning(ret);
-            % [ret]=SetExposureTime(obj.ExposureTime);                  %   Set exposure time in second  THIS IS THE USUAL VALUE
-            CheckWarning(ret);
-            % [ret]=SetExposureTime(0.1);                  %   TESTING EXPOSURE SETTING
-            % CheckWarning(ret);
-            [ret]=SetReadMode(4);                         %   Set read mode; 4 for Image
-            CheckWarning(ret);
-            [ret]=SetTriggerMode(1);                      %   Set internal trigger mode
-            CheckWarning(ret);
-            [ret]=SetShutter(1, 1, 0, 0);                 %   Open Shutter
-            CheckWarning(ret);
-            [ret,XPixels, YPixels]=GetDetector;           %   Get the CCD size
-            CheckWarning(ret);
-            [ret]=SetImage(1, 1, 1, XPixels, 1, YPixels); %   Set the image size
-            CheckWarning(ret);
-            [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
-            CheckWarning(ret);
-
-           [ret] = StartAcquisition();
-            CheckWarning(ret);
-
-                while(1)
-                    pause(1)
+                                [ret]=SetAcquisitionMode(3);        %   Set acquisition mode; 3 for Kinetic Series
+                                CheckWarning(ret);
+                                [ret]=SetNumberKinetics(groupSize);
+                                CheckWarning(ret);
+                                [ret]=SetTriggerMode(1);            %   Set external trigger mode
+                                CheckWarning(ret);
+                        end
+                        isSet = true;
+                    end
+                elseif ~isAcq
+                    [data,datarcvd] = poll(wq,10);
+                    if datarcvd && data.Message == "Start"
+                        %% Start acquisition
+                        [ret] = StartAcquisition();
+                        CheckWarning(ret);
+                        isAcq = true;
+                    end
+                else
                     % Setting this return value to avoid evaluation of the "if" statement
                     % for saving a new image if there is no new image.
                     atmcd.DRV_NO_NEW_DATA;
@@ -142,34 +169,37 @@ classdef Andor < Acquisition
                     % Updates when GetImages is called, but after having gotten all the
                     % images, it returns first = last = "the newest image that exists" even
                     % if the "newest image" in the buffer was already retreived.
-                    [r, firstIndex, lastIndex] = GetNumberNewImages();
-                    % CheckError(r);
-                    save(string(firstIndex) + string(lastIndex),'firstIndex')
+                    [ret, firstIndex, lastIndex] = GetNumberNewImages();
+                    CheckError(ret);
+                    % save(string(firstIndex) + string(lastIndex),'firstIndex')
                     if (lastIndex - firstIndex + 1) == groupSize
                         % save("test",'firstIndex')
-                        % callbackFunc([],[]);
+                        switch acqMode
+                            case "Absorption"
+                                [~, mData, ~, ~] = GetImages(firstIndex, lastIndex, ...
+                                    prod([XPixels,YPixels,groupSize]));
+                                mData = reshape(mData, XPixels, YPixels, groupSize);
+                                for ii = 1:groupSize
+                                    mData(:,:,ii) = flip(transpose(mData(:,:,ii)),1);
+                                end
+                                [ret] = StartAcquisition();
+                                CheckWarning(ret);
+                                send(cdq,mData)
+                        end
+                    end
+                    
+                    [data,datarcvd] = poll(wq);
+                    if datarcvd && data.Message == "Stop"
+                        [ret] = AbortAcquisition();
+                        CheckWarning(ret);
+                        [ret]=SetShutter(1, 2, 1, 1);
+                        CheckWarning(ret);
+                        [ret] = AndorShutDown();
+                        CheckWarning(ret);
                     end
                 end
             end
         end
-
-        function pauseCamera(obj)
-            %Pause camera recording
-            [ret] = AbortAcquisition();
-            CheckWarning(ret);
-        end
-
-        function stopCamera(obj)
-            %Stop camera recording
-            cancel(obj.Future)
-            [ret] = AbortAcquisition();
-            CheckWarning(ret);
-            [ret]=SetShutter(1, 2, 1, 1);
-            CheckWarning(ret);
-            [ret] = AndorShutDown();
-            CheckWarning(ret);
-        end
-
     end
 end
 
