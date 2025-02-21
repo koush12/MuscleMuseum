@@ -39,7 +39,7 @@ classdef DensityFit < BecAnalysis
                 name = "Cloud size",...
                 num = 33, ...
                 fpath = fullfile(becExp.DataAnalysisPath,"CloudSize"),...
-                loc = [-0.00001,0.032],...
+                loc = [0.6936,0.032],...
                 size = [0.3069,0.57]...
                 );
         end
@@ -262,6 +262,25 @@ classdef DensityFit < BecAnalysis
             end
             lg = findobj(fig,"Type","Legend");
             [lg.Location] = deal("best");
+            
+            %% Update Line connection
+            l = findobj(fig,"Type","Line");
+            le = findobj(fig,"Type","ErrorBar");
+            if becExp.AveragingMethod == "None"
+                if ~isempty(l)
+                    [l.LineStyle] = deal("none");
+                end
+                if ~isempty(le)
+                    [le.LineStyle] = deal("none");
+                end
+            else
+                if ~isempty(l)
+                    [l.LineStyle] = deal("-");
+                end
+                if ~isempty(le)
+                    [le.LineStyle] = deal("-");
+                end
+            end
         end
 
         function refresh(obj)

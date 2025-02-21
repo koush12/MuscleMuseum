@@ -61,6 +61,7 @@ classdef Chart < handle
                 obj.Figure = figure(obj.Number + obj.NumberOffset);
             end
             clf(obj.Figure);
+            obj.Figure.Visible = 'off';
 
             mp = sortMonitor;
             ss = mp(1,:);
@@ -99,13 +100,17 @@ classdef Chart < handle
                 loc = [obj.Location(1) * ss(3),obj.Location(2) * ss(4)];
             end
 
-            obj.Figure.OuterPosition = [200,600,fWidth,fHeight];
+            if isstring(loc)
+                obj.Figure.OuterPosition = [200,600,fWidth,fHeight];
+                movegui(obj.Figure,loc);
+            else
+                obj.Figure.OuterPosition = [loc,fWidth,fHeight];
+            end
+
             obj.Figure.NumberTitle = "off";
             obj.Figure.ToolBar = "figure";
             obj.Figure.MenuBar = "none";
-
             obj.Figure.Name = obj.Name;
-            movegui(obj.Figure,loc);
             fig = obj.Figure;
             if obj.Monitor > 1 && obj.Monitor <= size(mp,1)
                 pause(0.02) % This is somehow critical
@@ -113,6 +118,7 @@ classdef Chart < handle
                     [fig.OuterPosition(1:2)./ss(3:4).*mp(obj.Monitor,3:4) + mp(obj.Monitor,1:2),...
                     fig.OuterPosition(3:4)./ss(3:4).*mp(obj.Monitor,3:4)];
             end
+            obj.Figure.Visible = 'on';
         end
 
         function save(obj)

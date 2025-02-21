@@ -559,6 +559,15 @@ classdef BecExp < Trial
             end
         end
 
+        function refreshFigure(obj)
+            arguments
+                obj BecExp
+            end
+            for ii = 1:numel(obj.AnalysisMethod)
+                obj.(obj.AnalysisMethod(ii)).updateFigure(obj.NCompletedRun);
+            end
+        end
+
         function mData = readRun(obj,runIdx)
             runIdx = string(runIdx(:));
             runPath = fullfile(obj.DataPath,obj.DataPrefix) + "_" + runIdx ...

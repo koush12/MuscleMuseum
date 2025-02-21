@@ -48,6 +48,7 @@ classdef Gui < handle
                 % obj.App = eval(obj.Name);
             % end
 
+            obj.App.UIFigure.Visible = 'off';
             mp = sortMonitor;
             ss = mp(1,:);
 
@@ -85,15 +86,21 @@ classdef Gui < handle
                 loc = [obj.Location(1) * ss(3),obj.Location(2) * ss(4)];
             end
 
-            obj.App.UIFigure.Position = [200,600,fWidth,fHeight];
+            if isstring(loc)
+                obj.App.UIFigure.Position = [200,600,fWidth,fHeight];
+                movegui(obj.App.UIFigure,loc);
+            else
+                obj.App.UIFigure.Position = [loc,fWidth,fHeight];
+            end
+
             obj.App.UIFigure.Name = obj.Name;
-            movegui(obj.App.UIFigure,loc);
             if obj.Monitor > 1 && obj.Monitor <= size(mp,1)
                 pause(0.02) % This is somehow critical
                 obj.App.UIFigure.Position = ...
                     [obj.App.UIFigure.Position(1:2)./ss(3:4).*mp(obj.Monitor,3:4) + mp(obj.Monitor,1:2),...
                     obj.App.UIFigure.Position(3:4)./ss(3:4).*mp(obj.Monitor,3:4)];
-            end  
+            end
+            obj.App.UIFigure.Visible = 'on';
         end
 
         function update(obj)

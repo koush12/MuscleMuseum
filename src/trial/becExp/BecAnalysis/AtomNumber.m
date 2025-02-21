@@ -48,7 +48,7 @@ classdef AtomNumber < BecAnalysis
                 name = "Atom number",...
                 num = 29, ...
                 fpath = fullfile(becExp.DataAnalysisPath,"AtomNumber"),...
-                loc = "northeast",...
+                loc = [0.6936,0.6014],...
                 size = [0.3069,0.3995]...
                 );
         end
@@ -283,6 +283,25 @@ classdef AtomNumber < BecAnalysis
             %% Update lengend position
             lg = findobj(fig,"Type","Legend");
             lg.Location = "best";
+
+            %% Update Line connection
+            l = findobj(fig,"Type","Line");
+            le = findobj(fig,"Type","ErrorBar");
+            if becExp.AveragingMethod == "None"
+                if ~isempty(l)
+                    [l.LineStyle] = deal("none");
+                end
+                if ~isempty(le)
+                    [le.LineStyle] = deal("none");
+                end
+            else
+                if ~isempty(l)
+                    [l.LineStyle] = deal("-");
+                end
+                if ~isempty(le)
+                    [le.LineStyle] = deal("-");
+                end
+            end
         end
         
         function val = get.Total(obj)
