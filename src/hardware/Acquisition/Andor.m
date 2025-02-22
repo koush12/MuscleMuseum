@@ -6,7 +6,7 @@ classdef Andor < Acquisition
     %   Requires modification of code since there is a proprietary SDK for
     %   Andor in contrast to the other cameras that can be accessed through
     %   the VideoInput class.
-    properties (SetAccess=protected)
+    properties (SetAccess=protected,Transient)
         CallbackFunc function_handle
         Future parallel.FevalFuture
         ClientDataQueue parallel.pool.DataQueue
@@ -39,7 +39,7 @@ classdef Andor < Acquisition
                 p = parpool(1);
             end
 
-            obj.Future = parfeval(p,@(cq) obj.andorLoop(cq),0,obj.ClientQueue,obj.ClientDataQueue);
+            obj.Future = parfeval(p,@(cq,cdq) obj.andorLoop(cq,cdq),0,obj.ClientQueue,obj.ClientDataQueue);
 
             % Retrieve the worker queue from the worker
             obj.WorkerQueue = poll(obj.ClientQueue,10);
@@ -169,8 +169,8 @@ classdef Andor < Acquisition
                     % Updates when GetImages is called, but after having gotten all the
                     % images, it returns first = last = "the newest image that exists" even
                     % if the "newest image" in the buffer was already retreived.
-                    [ret, firstIndex, lastIndex] = GetNumberNewImages();
-                    CheckError(ret);
+                    [~, firstIndex, lastIndex] = GetNumberNewImages();
+                    % CheckError(ret);
                     % save(string(firstIndex) + string(lastIndex),'firstIndex')
                     if (lastIndex - firstIndex + 1) == groupSize
                         % save("test",'firstIndex')
@@ -178,7 +178,7 @@ classdef Andor < Acquisition
                             case "Absorption"
                                 [~, mData, ~, ~] = GetImages(firstIndex, lastIndex, ...
                                     prod([XPixels,YPixels,groupSize]));
-                                mData = reshape(mData, XPixels, YPixels, groupSize);
+                                mData = reshape(uint32(mData), XPixels, YPixels, groupSize);
                                 for ii = 1:groupSize
                                     mData(:,:,ii) = flip(transpose(mData(:,:,ii)),1);
                                 end
