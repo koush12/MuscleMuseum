@@ -202,14 +202,14 @@ classdef BecExp < Trial
                 %% Fetch Cicero log data and write into CiceroData
                 isFetched = obj.fetchCiceroLog(currentRunNumber);
                 if ~isFetched %Error handling when Cicero crashes
-                    obj.displayLog("Failed fatching the Cicero data. Deleting the latest images")
+                    obj.displayLog("Failed fetching the Cicero data. Deleting the latest images")
                     fList = dir(fullfile(obj.DataPath,"*"+obj.DataFormat));
                     imageList = string({fList.name});
                     if ~isempty(imageList)
                         imageNumberList = arrayfun(@(x) str2double(regexp(x,'\d*','match')),imageList);
                         deleteList = imageList(ismember(imageNumberList,currentRunNumber));
                         for ii = 1:numel(deleteList)
-                            deleteFile(fullfile(dataPath,deleteList(ii)))
+                            deleteFile(fullfile(obj.DataPath,deleteList(ii)))
                         end
                     end
                     obj.countExistedLog
