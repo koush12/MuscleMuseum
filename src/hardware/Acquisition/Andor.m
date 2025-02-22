@@ -178,7 +178,7 @@ classdef Andor < Acquisition
                             case "Absorption"
                                 [~, mData, ~, ~] = GetImages(firstIndex, lastIndex, ...
                                     prod([XPixels,YPixels,groupSize]));
-                                mData = reshape(uint32(mData), XPixels, YPixels, groupSize);
+                                mData = reshape(mData, XPixels, YPixels, groupSize);
                                 for ii = 1:groupSize
                                     mData(:,:,ii) = flip(transpose(mData(:,:,ii)),1);
                                 end
@@ -196,6 +196,7 @@ classdef Andor < Acquisition
                         CheckWarning(ret);
                         [ret] = AndorShutDown();
                         CheckWarning(ret);
+                        break
                     end
                 end
             end
