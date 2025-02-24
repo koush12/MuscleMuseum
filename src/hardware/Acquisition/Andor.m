@@ -52,6 +52,7 @@ classdef Andor < Acquisition
             data.Message = "SetParameter";
             data.AcquisitionMode = "Absorption";
             data.ExposureTime = obj.ExposureTime;
+            data.BitPerSample = obj.BitsPerSample;
             obj.ImageGroupSize = 3;
             send(obj.WorkerQueue,data);
         end
@@ -111,6 +112,7 @@ classdef Andor < Acquisition
             isSet = false;
             isAcq = false;
             acqMode = "Absorption";
+            bitPerSample = 16;
 
             while true
                 pause(0.1)
@@ -136,6 +138,7 @@ classdef Andor < Acquisition
                         CheckWarning(ret);
                         [ret]=SetEMCCDGain(1);                        %   Set EMCCD gain
                         CheckWarning(ret);
+                        bitPerSample = data.BitPerSample;
 
                         %% Set acquisition mode
                         switch data.AcquisitionMode
@@ -150,7 +153,7 @@ classdef Andor < Acquisition
                                 [ret]=SetTriggerMode(1);            %   Set external trigger mode
                                 CheckWarning(ret);
                         end
-                        isSet = true;
+                        isSet = true;                      
                     end
                 elseif ~isAcq
                     [data,datarcvd] = poll(wq,10);
@@ -170,10 +173,9 @@ classdef Andor < Acquisition
                     % images, it returns first = last = "the newest image that exists" even
                     % if the "newest image" in the buffer was already retreived.
                     [~, firstIndex, lastIndex] = GetNumberNewImages();
-                    % CheckError(ret);
-                    % save(string(firstIndex) + string(lastIndex),'firstIndex')
+
+                    %% Send image data to the client
                     if (lastIndex - firstIndex + 1) == groupSize
-                        % save("test",'firstIndex')
                         switch acqMode
                             case "Absorption"
                                 [~, mData, ~, ~] = GetImages(firstIndex, lastIndex, ...
@@ -182,12 +184,23 @@ classdef Andor < Acquisition
                                 for ii = 1:groupSize
                                     mData(:,:,ii) = flip(transpose(mData(:,:,ii)),1);
                                 end
+
+                                switch bitPerSample
+                                    case 8
+                                        mData = uint8(mData);
+                                    case 16
+                                        mData = uint16(mData);
+                                    case 32
+                                        mData = uint32(mData);
+                                end
+
                                 [ret] = StartAcquisition();
                                 CheckWarning(ret);
                                 send(cdq,mData)
                         end
                     end
                     
+                    %% Stop
                     [data,datarcvd] = poll(wq);
                     if datarcvd && data.Message == "Stop"
                         [ret] = AbortAcquisition();

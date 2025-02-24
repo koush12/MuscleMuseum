@@ -8,7 +8,7 @@ classdef AndorIXon897 < Andor
             obj.CameraModel = "IXon897";
             obj.PixelSize = 16e-06;
             obj.ImageSize = [512,512];
-            obj.BitsPerSample = 32;
+            obj.BitsPerSample = 16;
         end
     end
 end
