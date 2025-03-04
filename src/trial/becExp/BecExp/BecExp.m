@@ -8,6 +8,7 @@ classdef BecExp < Trial
         AnalysisMethod string % List of analysis methods
         CloudCenter double % Cloud center [y_0,x_0] from previous measurement, in pixels
         AveragingMethod string = "StdErr" %Averaging method
+        WaveformAssociation string
     end
 
     properties(Hidden)
@@ -74,11 +75,7 @@ classdef BecExp < Trial
             obj.HardwareList = HardwareList;
 
             % Atom setting
-            try
-                obj.Atom = Alkali(obj.ConfigParameter.AtomName);
-            catch
-                obj.Atom = Divalent(obj.ConfigParameter.AtomName);
-            end
+            obj.Atom = getAtom(obj.ConfigParameter.AtomName);
 
             % Acquisition settings
             obj.Acquisition = getAcq(obj.ConfigParameter.AcquisitionName);
