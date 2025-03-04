@@ -157,7 +157,8 @@ classdef Ad < BecAnalysis
             adData = obj.AdData;
             x = obj.BecExp.Roi.XList * obj.BecExp.Acquisition.PixelSizeReal;
             y = obj.BecExp.Roi.YList * obj.BecExp.Acquisition.PixelSizeReal;
-            save(fullfile(obj.BecExp.DataAnalysisPath,"AdData"),"adData","x","y")
+            xlabel = obj.BecExp.ScannedParameterList;
+            save(fullfile(obj.BecExp.DataAnalysisPath,"AdData"),"adData","x","y","xlabel");
             if obj.Chart(1).IsEnabled
                 saveas(obj.Chart(1).Figure,obj.Chart(1).Path,'png')
             end
