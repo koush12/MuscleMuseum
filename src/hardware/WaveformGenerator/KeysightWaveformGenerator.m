@@ -58,11 +58,13 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                 end
 
                 % Output mode
-                switch obj.OutputMode
-                    case "Normal"
-                        writeline(v, outputStr + ':MODE NORMal');
-                    case "Gated"
-                        writeline(v, outputStr + ':MODE GATed'); % Gating the output
+                if obj.IsOutput(ii)
+                    switch obj.OutputMode
+                        case "Normal"
+                            writeline(v, outputStr + ':MODE NORMal');
+                        case "Gated"
+                            writeline(v, outputStr + ':MODE GATed'); % Gating the output
+                    end
                 end
 
                 % Output load
@@ -84,6 +86,8 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
             for ii = 1:obj.NChannel
                 %% Check waveform and output
                 if isempty(obj.WaveformList{ii})
+                    outputStr = "OUTPut" + string(ii);
+                    writeline(v,outputStr + " 0") % Stop output if no waveform
                     continue
                 elseif obj.IsOutput(ii) == false
                     continue
@@ -155,7 +159,7 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                 %% Check if upload is successful
                 s = obj.check;
                 if s
-                    disp(obj.Name + " channel" + num2str(ii) + " uploaded successfully.")
+                    disp(obj.Name + " channel" + num2str(ii) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
                 else
                     obj.set
                 end

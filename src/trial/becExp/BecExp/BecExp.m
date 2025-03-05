@@ -336,6 +336,7 @@ classdef BecExp < Trial
             obj.displayLog("Trial #" + string(obj.SerialNumber) + ": Starting data acquisition and real-time analysis.")
             obj.countExistedLog
 
+            obj.setWaveform
             if obj.IsAutoAcquire
                 obj.Acquisition.connectCamera;
                 switch obj.Imaging.ImagingMethod
@@ -937,6 +938,42 @@ classdef BecExp < Trial
 
         end
 
+        function setWaveform(obj)
+            wa = obj.WaveformAssociation;
+            if ~isempty(wa) && ~ismissing(wa) && wa ~="None"
+                % Check if the existing settings are corrent
+                obj.displayLog("Checking waveform associations...")
+                wat = str2table(wa);
+                wgSettings = loadVar("WaveformGeneratorSetting","WaveformGeneratorSetting");
+                deleteIdx = [];
+                for ii = 1:size(wat,1)
+                    wgs = wgSettings(wgSettings.Name == wat.WaveformGeneratorName,:);
+                    chNumber = getNumberFromString(wat.ChannelName(ii));
+                    if wat.WaveformListName(ii) == wgs.WaveformListName{1}(chNumber) ...
+                            && wgs.IsOutput{1}(chNumber)
+                        deleteIdx = [deleteIdx,ii];
+                    end
+                end
+
+                % Delete consistent settings
+                wat(deleteIdx,:) = [];
+                if isempty(wat)
+                    obj.displayLog("The associated waveforms have already been uploaded. Will not force uploading.")
+                    return
+                end
+
+                % Get the HardwareControlPanel app
+                obj.displayLog("Force uploading the associated waveforms.")
+                hwApp = get(findall(0, 'Tag', "HwControlPanel"), 'RunningAppInstance');
+                if isempty(hwApp)
+                    hwApp = HardwareControlPanel;
+                end
+                
+                % Force to change settings
+                hwApp.setWaveformAssociation(wat);
+            end
+        end
+
         function updateHardware(obj)
             %UPDATEHARDWARE Summary of this function goes here
             %   Detailed explanation goes here
@@ -981,7 +1018,7 @@ classdef BecExp < Trial
                 scopeName = C(1);
                 channelName = C(2);
                 valueName = C(3);
-                channelNumber = double(regexp(channelName,'\d*','Match'));
+                channelNumber = getNumberFromString(channelName);
                 if isfield(obj.ScopeData,fullValueName(kk)) && numel(obj.ScopeData.(fullValueName(kk))) == (currentRunNumber - 1)
                     obj.ScopeData.(fullValueName(kk))(end+1) = readRun(currentRunNumber,scopeName,valueName,channelNumber);
                 elseif isfield(obj.ScopeData,fullValueName(kk)) && numel(obj.ScopeData.(fullValueName(kk))) == currentRunNumber
@@ -992,6 +1029,7 @@ classdef BecExp < Trial
                     end
                 end
             end
+
             function value = readRun(runIdx,sName,vName,cNumber)
                 try
                     scopeData = loadVar(fullfile(obj.HardwareLogPath,obj.DataPrefix + "_" + num2str(runIdx)) + "_" + sName + ".mat");
