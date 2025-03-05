@@ -947,7 +947,7 @@ classdef BecExp < Trial
                 wgSettings = loadVar("WaveformGeneratorSetting","WaveformGeneratorSetting");
                 deleteIdx = [];
                 for ii = 1:size(wat,1)
-                    wgs = wgSettings(wgSettings.Name == wat.WaveformGeneratorName,:);
+                    wgs = wgSettings(wgSettings.Name == wat.WaveformGeneratorName(ii),:);
                     chNumber = getNumberFromString(wat.ChannelName(ii));
                     if wat.WaveformListName(ii) == wgs.WaveformListName{1}(chNumber) ...
                             && wgs.IsOutput{1}(chNumber)
