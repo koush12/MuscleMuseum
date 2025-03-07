@@ -10,6 +10,7 @@ classdef (Abstract) WaveformGenerator < Hardware
         IsOutput logical
         OutputLoad string {mustBeMember(OutputLoad,{'50','Infinity'})} = "50"
         WaveformList cell
+        OutputLimit (1,2) double % [lower,upper], At 50 Ohm
     end
     
     methods

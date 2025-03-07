@@ -115,6 +115,29 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                     segmentSizeMinimum = 96;
             end
 
+            %% Set the peak-to-peak values
+            for ii = 1:numel(enabledChannel)
+                amp = 0;
+                for jj = numel(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin)
+                    amp = max(amp,max(abs(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin{jj}.Sample)));
+                end
+                if obj.OutputLoad == "50"
+                    oLim = obj.OutputLimit;
+                else
+                    oLim = obj.OutputLimit * 2;
+                end
+                if amp > oLim(2)
+                    error("The amplitude of the waveform exceeds the output limit.")
+                elseif amp < oLim(1)
+                    amp = oLim(1);
+                end
+                if obj.OutputLoad == "50"
+                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, amp*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
+                else
+                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, amp/2*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
+                end
+            end
+
             %% Check numbers of waveforms of each channel
             nWaveList = zeros(1,nEnabledChannel);
             for ii = 1:nEnabledChannel
@@ -125,11 +148,31 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             else
                 error("The numbers of waveforms of each channel have to be the same.")
             end
-            [~,obj.Device] = spcMSetupModeRepSequence(obj.Device, 0, 1, nWave, 0); % need to verify
+
+            % See the channel selection chapter
+            bitAll = int64(2.^(enabledChannel-1));
+            bitMask = bitAll(1);
+            for ii = 1:(numel(bitAll)-1)
+                bitMask = bitor(bitMask,bitAll(ii+1));
+            end
+            bitMaskH = int32(0);
+            bitList = find(bitget(bitMask,33:64));
+            for ii = 1:numel(bitList)
+                bitMaskH = bitset(bitMaskH,bitList(ii));
+            end
+            bitMaskL = uint32(0);
+            bitList = find(bitget(bitMask,1:32));
+            for ii = 1:numel(bitList)
+                bitMaskL = bitset(bitMaskL,bitList(ii));
+            end
+            [~,obj.Device] = spcMSetupModeRepSequence(obj.Device, bitMaskH, bitMaskL, nWave, 0); 
 
             %% Prepare the waveforms
             sample = cell(nWave,nEnabledChannel);
             scale=32767/2;
+            if obj.OutputLoad == "Infinity"
+                scale = scale/2;
+            end
             
             for ii = 1:nEnabledChannel
                 obj.WaveformList{enabledChannel(ii)}.SamplingRate = obj.SamplingRate;
@@ -153,9 +196,9 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                     end
                     sample{jj,ii} = sample{jj,ii} * scale;
                 end
-                error = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_WRITESEGMENT'),jj-1); % somehow we have to write the output explicitly if we call spcm_dwSetParam_i32 
-                error = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_SEGMENTSIZE'), segSize);
-                error = spcm_dwSetData(obj.Device.hDrv, 0, segSize, nEnabledChannel, 0, sample{jj,:});
+                errorCode = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_WRITESEGMENT'),jj-1); % somehow we have to write the output explicitly if we call spcm_dwSetParam_i32 
+                errorCode = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_SEGMENTSIZE'), segSize);
+                errorCode = spcm_dwSetData(obj.Device.hDrv, 0, segSize, nEnabledChannel, 0, sample{jj,:});
             end
 
             %% Determine the order
@@ -186,7 +229,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             s = obj.check;
             if s
                 for ii = enabledChannel
-                    disp(obj.Name + " channel" + num2str(ii) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
+                    disp(obj.Name + " channel" + num2str(ii-1) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
                 end
                 obj.saveObject;
             end
