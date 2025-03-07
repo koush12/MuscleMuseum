@@ -20,8 +20,15 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             obj@WaveformGenerator(resourceName,name);
             obj.Manufacturer = "Spectrum";
         end
-        
+
         function connect(obj)
+            % Spectrum requires us to close the card handle every time we
+            % upload a waveform. So it's not possible to establish a
+            % constant connection. Every time we need to upload a new
+            % waveform, we need to connect to the card again.
+        end
+        
+        function connectSpec(obj)
             try
                 obj.RegMap = spcMCreateRegMap;
                 obj.ErrorMap = spcMCreateErrorMap;
@@ -36,6 +43,10 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
         end
 
         function set(obj)
+
+        end
+        
+        function setSpec(obj)
             obj.check;
 
             %% Set sampling rate
@@ -57,46 +68,9 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             for ii = 1:obj.NChannel
                 if obj.IsOutput(ii)
                     [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, 2000, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
+                else
+                    
                 end
-
-
-                % sourceStr = "SOURce" + string(ii);
-                % outputStr = "OUTPut" + string(ii);
-                % triggerStr = "TRIGger" + string(ii);
-                % writeline(d,outputStr + " 0") % Stop output
-                % writeline(d,sourceStr + ":DATA:VOLatile:CLEar") % Clear volatile memory
-                % writeline(d,"FORM:BORD SWAP") % Swaps byte order to LSB
-                % writeline(d, sprintf(sourceStr + ':FUNCtion:ARBitrary:SRATe %g MHZ', obj.SamplingRate * 1e-6)); % Sampling rate
-                % writeline(d, sprintf(sourceStr + ':VOLTage:HIGH %g', 2.0)); % Voltage high
-                % writeline(d, sprintf(sourceStr + ':VOLTage:LOW %g', -2.0)); % Voltage low
-                % writeline(d, sprintf(sourceStr + ':VOLTage:OFFset %g', 0)); % Voltage offset
-                % writeline(d, sprintf(sourceStr + ':FUNCtion:ARBitrary:PTPeak %g', 1)); % Set arbitray waveform p2p
-                % 
-                % % Trigger source
-                % 
-                % % Trigger slope
-                % switch obj.TriggerSlope
-                %     case "Rise"
-                %         writeline(d, triggerStr + ":SLOPe POS");
-                %     case "Fall"
-                %         writeline(d, triggerStr + ":SLOPe NEG");
-                % end
-                % 
-                % % Output mode
-                % switch obj.OutputMode
-                %     case "Normal"
-                %         writeline(d, outputStr + ':MODE NORMal');
-                %     case "Gated"
-                %         writeline(d, outputStr + ':MODE GATed'); % Gating the output
-                % end
-                % 
-                % % Output load
-                % switch obj.OutputLoad
-                %     case "50"
-                %         writeline(d, outputStr + ':LOAD 50')
-                %     case "Infinity"
-                %         writeline(d, outputStr + ':LOAD INFinity')
-                % end
             end
         end
 
@@ -106,9 +80,9 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             % same way. The samples must be uploaded segment by segment,
             % and each (physical) segment stores samples of all channels.
             % See the manual, chapter <data management>.
-            %% Check connection to the device
-            obj.set;
-            d = obj.Device;
+            %% Set and connect
+            obj.connectSpec;
+            obj.setSpec;
 
             %% Get the minimum segment size
             enabledChannel = [];
@@ -165,7 +139,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                 segSize = 0;
                 for ii = 1:nEnabledChannel
                     if jj == nWave
-                        sample{jj,ii} = zeros(0,1,segmentSizeMinimum);
+                        sample{jj,ii} = zeros(1,segmentSizeMinimum);
                     else
                         sample{jj,ii} = obj.WaveformList{enabledChannel(ii)}.WaveformOrigin{jj}.Sample;
                     end
@@ -174,14 +148,14 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                     end
                     remainder=32-mod(numel(sample{jj,ii}), 32);
                     segSize = segSize + ceil(numel(sample{jj,ii})/32)*32;
-                    if remainder
+                    if mod(numel(sample{jj,ii}), 32)
                         sample{jj,ii} = [sample{jj,ii},interp1(sample{jj,ii}(end-9:end),11:(remainder+10),'linear','extrap')];
                     end
                     sample{jj,ii} = sample{jj,ii} * scale;
                 end
-                spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_WRITESEGMENT'),jj-1);
-                spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_SEGMENTSIZE'), segSize);
-                spcm_dwSetData(obj.Device.hDrv, 0, segSize, nEnabledChannel, 0, sample{jj,:});
+                error = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_WRITESEGMENT'),jj-1); % somehow we have to write the output explicitly if we call spcm_dwSetParam_i32 
+                error = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_SEGMENTSIZE'), segSize);
+                error = spcm_dwSetData(obj.Device.hDrv, 0, segSize, nEnabledChannel, 0, sample{jj,:});
             end
 
             %% Determine the order
@@ -211,15 +185,19 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             %% Check if upload is successful
             s = obj.check;
             if s
-                disp(obj.Name + " channel" + num2str(ii) + " uploaded successfully.")
-            else
-                obj.set
+                for ii = enabledChannel
+                    disp(obj.Name + " channel" + num2str(ii) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
+                end
+                obj.saveObject;
             end
-
-            obj.saveObject;
+            obj.closeSpec;
         end
 
         function close(obj)
+
+        end
+        
+        function closeSpec(obj)
             if isempty(obj.Device)
                 warning("Device is not connected.")
                 return

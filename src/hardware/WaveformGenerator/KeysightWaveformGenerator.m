@@ -160,12 +160,11 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                 s = obj.check;
                 if s
                     disp(obj.Name + " channel" + num2str(ii) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
+                    obj.saveObject;
                 else
                     obj.set
                 end
             end
-
-            obj.saveObject;
         end
 
         function close(obj)
