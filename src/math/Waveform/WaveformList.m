@@ -8,10 +8,8 @@ classdef WaveformList < handle
         PatchConstant double = 0
         IsTriggerAdvance logical = false
         WaveformOrigin cell
-    end
-
-    properties (SetObservable)
         SamplingRate double % In Hz
+        NCycle double {mustBePositive} = 10
     end
 
     properties (Dependent)
@@ -36,6 +34,7 @@ classdef WaveformList < handle
                 options.patchConstant double = 0
                 options.isTriggerAdvance logical = false
                 options.waveformOrigin cell = {}
+                options.nCycle double = 10
             end
             obj.Name = name;
             field = string(fieldnames(options));
@@ -44,7 +43,6 @@ classdef WaveformList < handle
                     obj.(capitalizeFirst(field(ii))) = options.(field(ii));
                 end
             end
-            addlistener(obj,'SamplingRate','PostSet',@obj.handlePropEvents);
         end
 
         function dt = get.TimeStep(obj)
@@ -73,6 +71,13 @@ classdef WaveformList < handle
             %% Set sampling rate
             for ii = 1:nWave
                 obj.WaveformOrigin{ii}.SamplingRate = obj.SamplingRate;
+            end
+
+            %% Set NCycle
+            for ii = 1:nWave
+                if isa(obj.WaveformOrigin{ii},"PeriodicWaveform")
+                    obj.WaveformOrigin{ii}.NCycle = obj.NCycle;
+                end
             end
 
             %% Initialization
@@ -231,17 +236,21 @@ classdef WaveformList < handle
             render
         end
 
-    end
+        function set.SamplingRate(obj,val)
+            obj.SamplingRate = round(val);
+            nWave = numel(obj.WaveformOrigin);
+            for ii = 1:nWave
+                obj.WaveformOrigin{ii}.SamplingRate = obj.SamplingRate;
+            end
+        end
 
-    methods (Static)
-        function handlePropEvents(src,evnt)
-            switch src.Name
-                case 'SamplingRate'
-                    obj = evnt.AffectedObject;
-                    nWave = numel(obj.WaveformOrigin);
-                    for ii = 1:nWave
-                        obj.WaveformOrigin{ii}.SamplingRate = obj.SamplingRate;
-                    end
+        function set.NCycle(obj,val)
+            obj.NCycle = round(val);
+            nWave = numel(obj.WaveformOrigin);
+            for ii = 1:nWave
+                if isa(obj.WaveformOrigin{ii},"PeriodicWaveform")
+                    obj.WaveformOrigin{ii}.NCycle = obj.NCycle;
+                end
             end
         end
     end

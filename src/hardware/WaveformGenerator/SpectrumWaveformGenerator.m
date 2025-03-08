@@ -36,6 +36,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                 error("The Spectrum MATLAB library is not found. Please download it from Spectrum AWG websites and install it." + ...
                 " Make sure the library is in MATLAB's search path.")
             end
+            spcMFree;
             [isOpened,obj.Device] = spcMInitDevice(char(obj.ResourceName));
             if ~isOpened
                 spcMErrorMessageStdOut(obj.Device, 'Error: Could not open card\n', true)
@@ -52,9 +53,11 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             %% Set sampling rate
             [success,obj.Device] = spcMSetupClockPLL(obj.Device, obj.SamplingRate, 0);
             if (success == false)
+                obj.closeSpec
                 spcMErrorMessageStdOut(obj.Device, 'Error: spcMSetupClockPLL:\n\t', true);
                 return;
             end
+            obj.SamplingRate = obj.Device.setSamplerate;
 
             %% Set triggering
             switch obj.TriggerSource
@@ -67,9 +70,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             %% Set output
             for ii = 1:obj.NChannel
                 if obj.IsOutput(ii)
-                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, 2000, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
-                else
-                    
+                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, 2000, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);     
                 end
             end
         end
@@ -80,6 +81,8 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             % same way. The samples must be uploaded segment by segment,
             % and each (physical) segment stores samples of all channels.
             % See the manual, chapter <data management>.
+            % Decided not to spend much time on trigger advance. So trigger
+            % advance is only supported for periodic waves for now.
             %% Set and connect
             obj.connectSpec;
             obj.setSpec;
@@ -116,25 +119,26 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             end
 
             %% Set the peak-to-peak values
+            amp = zeros(1,nEnabledChannel);
             for ii = 1:numel(enabledChannel)
-                amp = 0;
                 for jj = numel(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin)
-                    amp = max(amp,max(abs(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin{jj}.Sample)));
+                    amp(ii) = max(amp(ii),max(abs(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin{jj}.Sample)));
                 end
                 if obj.OutputLoad == "50"
                     oLim = obj.OutputLimit;
                 else
                     oLim = obj.OutputLimit * 2;
                 end
-                if amp > oLim(2)
+                if amp(ii) > oLim(2)
+                    obj.closeSpec
                     error("The amplitude of the waveform exceeds the output limit.")
-                elseif amp < oLim(1)
-                    amp = oLim(1);
+                elseif amp(ii) < oLim(1)
+                    amp(ii) = oLim(1);
                 end
                 if obj.OutputLoad == "50"
-                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, amp*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
+                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, enabledChannel(ii)-1, amp(ii)*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
                 else
-                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, ii-1, amp/2*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
+                    [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, enabledChannel(ii)-1, amp(ii)/2*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
                 end
             end
 
@@ -146,6 +150,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             if all(nWaveList == nWaveList(1))
                 nWave = nWaveList(1) + 1;
             else
+                obj.closeSpec
                 error("The numbers of waveforms of each channel have to be the same.")
             end
 
@@ -169,17 +174,14 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
 
             %% Prepare the waveforms
             sample = cell(nWave,nEnabledChannel);
-            scale=32767/2;
-            if obj.OutputLoad == "Infinity"
-                scale = scale/2;
-            end
+            scale=32767;
             
             for ii = 1:nEnabledChannel
                 obj.WaveformList{enabledChannel(ii)}.SamplingRate = obj.SamplingRate;
             end
 
             for jj = 1:nWave
-                segSize = 0;
+                segSize = zeros(1,nEnabledChannel);
                 for ii = 1:nEnabledChannel
                     if jj == nWave
                         sample{jj,ii} = zeros(1,segmentSizeMinimum);
@@ -190,21 +192,30 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                         sample{jj,ii} = [sample{jj,ii},interp1(sample{jj,ii},(numel(sample{jj,ii})+1):segmentSizeMinimum,'linear','extrap')];
                     end
                     remainder=32-mod(numel(sample{jj,ii}), 32);
-                    segSize = segSize + ceil(numel(sample{jj,ii})/32)*32;
+                    segSize(ii) = ceil(numel(sample{jj,ii})/32)*32;
                     if mod(numel(sample{jj,ii}), 32)
                         sample{jj,ii} = [sample{jj,ii},interp1(sample{jj,ii}(end-9:end),11:(remainder+10),'linear','extrap')];
                     end
-                    sample{jj,ii} = sample{jj,ii} * scale;
+                    sample{jj,ii} = sample{jj,ii} * scale / amp(ii);
                 end
-                errorCode = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_WRITESEGMENT'),jj-1); % somehow we have to write the output explicitly if we call spcm_dwSetParam_i32 
-                errorCode = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_SEGMENTSIZE'), segSize);
-                errorCode = spcm_dwSetData(obj.Device.hDrv, 0, segSize, nEnabledChannel, 0, sample{jj,:});
+                if ~all(segSize == segSize(1))
+                    obj.closeSpec
+                    error("The segment sizes of each channel have to be the same for each uploaded segment.")
+                end
+                errorCode = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_WRITESEGMENT'),jj-1); % somehow we have to write the output explicitly if we call spcm_dwSetParam_i32
+                errorCode = spcm_dwSetParam_i32(obj.Device.hDrv, obj.RegMap('SPC_SEQMODE_SEGMENTSIZE'), segSize(1));
+                errorCode = spcm_dwSetData(obj.Device.hDrv, 0, segSize(1), nEnabledChannel, 0, sample{jj,:});
             end
 
             %% Determine the order
+            isTriggerAdvance = obj.WaveformList{1}.IsTriggerAdvance;
             for ii = 1:nWave
                 if ii ~= nWave
-                    [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,1,0);
+                    if ~isTriggerAdvance
+                        [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,1,0);
+                    else
+                        [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,1,1);
+                    end
                 else
                     [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,0,ii-1,1,1); %loop the zero output until trigger
                 end
@@ -221,6 +232,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                     fprintf (' OK\n ................... replay stopped\n');
                 else
                     spcMErrorMessageStdOut (obj.Device, 'Error: spcm_dwSetParam_i32:\n\t', true);
+                    obj.closeSpec
                     return;
                 end
             end
@@ -229,7 +241,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             s = obj.check;
             if s
                 for ii = enabledChannel
-                    disp(obj.Name + " channel" + num2str(ii-1) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
+                    disp(obj.Name + " channel" + num2str(ii) + " uploaded [" + obj.WaveformList{ii}.Name +"] successfully.")
                 end
                 obj.saveObject;
             end
@@ -258,6 +270,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             elseif bitand(obj.Device.featureMap, obj.RegMap('SPCM_FEAT_SEQUENCE')) == 0
                 spcMErrorMessageStdOut(obj.Device, 'Error: Sequence Mode Option not installed. Example was done especially for this option!\n', false);
             elseif string(obj.Device.errorText) ~= "No Error"
+                obj.closeSpec
                 error(obj.Device.errorText)
             else
                 status = true;
