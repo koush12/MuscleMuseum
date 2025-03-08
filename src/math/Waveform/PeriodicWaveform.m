@@ -9,6 +9,10 @@ classdef (Abstract) PeriodicWaveform < Waveform
         Phase double % In radians
     end
 
+    properties (Hidden)
+        NCycle double {mustBePositive} = 10
+    end
+
     properties (Dependent)
         Period % In s
         NPeriod
@@ -17,10 +21,6 @@ classdef (Abstract) PeriodicWaveform < Waveform
         EndTimeAllCycle
         SampleOneCycle
         SampleExtra
-    end
-
-    properties (Constant)
-        NCycle = 10
     end
     
     methods
