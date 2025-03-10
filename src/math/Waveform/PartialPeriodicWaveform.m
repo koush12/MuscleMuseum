@@ -26,8 +26,8 @@ classdef (Abstract) PartialPeriodicWaveform < Waveform
         SampleAfter
     end
 
-    properties (Constant)
-        NCycle = 10
+    properties (Hidden)
+        NCycle double = 10
     end
     
     methods

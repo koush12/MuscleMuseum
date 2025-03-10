@@ -10,7 +10,7 @@ classdef (Abstract) PeriodicWaveform < Waveform
     end
 
     properties (Hidden)
-        NCycle double {mustBePositive} = 10
+        NCycle double = 10
     end
 
     properties (Dependent)

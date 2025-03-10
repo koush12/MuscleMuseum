@@ -81,8 +81,8 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             % same way. The samples must be uploaded segment by segment,
             % and each (physical) segment stores samples of all channels.
             % See the manual, chapter <data management>.
-            % Decided not to spend much time on trigger advance. So trigger
-            % advance is only supported for periodic waves for now.
+            % It might be buggy to use the simultaneous concat option or 
+            % the trigger advance option with multiple channels.
             %% Set and connect
             obj.connectSpec;
             obj.setSpec;
@@ -106,8 +106,6 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             end
 
             switch nEnabledChannel
-                case 0
-                    return
                 case 1
                     segmentSizeMinimum = 384;
                 case 2
@@ -117,12 +115,32 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                 otherwise
                     segmentSizeMinimum = 96;
             end
+            
+            %% Load prepared waveforms
+            t = cell(1,nEnabledChannel);
+            for ii = 1:nEnabledChannel
+                obj.WaveformList{enabledChannel(ii)}.SamplingRate = obj.SamplingRate;
+                obj.WaveformList{enabledChannel(ii)}.NCycle = NaN; % For spectrum AWG, we don't want to split a periodic waveform into parts and upload
+                t{ii} = obj.WaveformList{enabledChannel(ii)}.WaveformPrepared; % Load the prepared waveforms
+            end
+
+            %% Check numbers of waveforms of each channel
+            nWaveList = zeros(1,nEnabledChannel);
+            for ii = 1:nEnabledChannel
+                nWaveList(ii) = size(t{ii},1);
+            end
+            if all(nWaveList == nWaveList(1))
+                nWave = nWaveList(1) + 1;
+            else
+                obj.closeSpec
+                error("The numbers of waveforms of each channel have to be the same.")
+            end
 
             %% Set the peak-to-peak values
             amp = zeros(1,nEnabledChannel);
-            for ii = 1:numel(enabledChannel)
-                for jj = numel(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin)
-                    amp(ii) = max(amp(ii),max(abs(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin{jj}.Sample)));
+            for ii = 1:nEnabledChannel
+                for jj = 1:(nWave-1)
+                    amp(ii) = max(amp(ii),max(abs(t{ii}.Sample{jj})));
                 end
                 if obj.OutputLoad == "50"
                     oLim = obj.OutputLimit;
@@ -142,18 +160,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                 end
             end
 
-            %% Check numbers of waveforms of each channel
-            nWaveList = zeros(1,nEnabledChannel);
-            for ii = 1:nEnabledChannel
-                nWaveList(ii) = numel(obj.WaveformList{enabledChannel(ii)}.WaveformOrigin);
-            end
-            if all(nWaveList == nWaveList(1))
-                nWave = nWaveList(1) + 1;
-            else
-                obj.closeSpec
-                error("The numbers of waveforms of each channel have to be the same.")
-            end
-
+            %% Set channel selection
             % See the channel selection chapter
             bitAll = int64(2.^(enabledChannel-1));
             bitMask = bitAll(1);
@@ -172,13 +179,9 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             end
             [~,obj.Device] = spcMSetupModeRepSequence(obj.Device, bitMaskH, bitMaskL, nWave, 0); 
 
-            %% Prepare the waveforms
+            %% Tailor the waveforms
             sample = cell(nWave,nEnabledChannel);
-            scale=32767;
-            
-            for ii = 1:nEnabledChannel
-                obj.WaveformList{enabledChannel(ii)}.SamplingRate = obj.SamplingRate;
-            end
+            scale=32767;            
 
             for jj = 1:nWave
                 segSize = zeros(1,nEnabledChannel);
@@ -186,7 +189,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                     if jj == nWave
                         sample{jj,ii} = zeros(1,segmentSizeMinimum);
                     else
-                        sample{jj,ii} = obj.WaveformList{enabledChannel(ii)}.WaveformOrigin{jj}.Sample;
+                        sample{jj,ii} = t{ii}.Sample{jj};
                     end
                     if numel(sample{jj,ii}) < segmentSizeMinimum
                         sample{jj,ii} = [sample{jj,ii},interp1(sample{jj,ii},(numel(sample{jj,ii})+1):segmentSizeMinimum,'linear','extrap')];
@@ -208,13 +211,13 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             end
 
             %% Determine the order
-            isTriggerAdvance = obj.WaveformList{1}.IsTriggerAdvance;
             for ii = 1:nWave
                 if ii ~= nWave
-                    if ~isTriggerAdvance
-                        [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,1,0);
-                    else
-                        [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,1,1);
+                    switch t{1}.PlayMode(ii)
+                        case "Repeat"
+                            [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,t{1}.NRepeat(ii),0);
+                        case "RepeatTilTrigger"
+                            [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,ii,ii-1,1,1);
                     end
                 else
                     [~,obj.Device] = spcMSetupSequenceStep(obj.Device,ii-1,0,ii-1,1,1); %loop the zero output until trigger

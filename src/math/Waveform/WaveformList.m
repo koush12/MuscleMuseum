@@ -9,7 +9,7 @@ classdef WaveformList < handle
         IsTriggerAdvance logical = false
         WaveformOrigin cell
         SamplingRate double % In Hz
-        NCycle double {mustBePositive} = 10
+        NCycle double = 10
     end
 
     properties (Dependent)
@@ -90,7 +90,7 @@ classdef WaveformList < handle
             switch obj.ConcatMethod
                 case "Sequential"
                     for ii = 1:nWave
-                        if isa(obj.WaveformOrigin{ii},"PeriodicWaveform")
+                        if isa(obj.WaveformOrigin{ii},"PeriodicWaveform") && ~isnan(obj.WaveformOrigin{ii}.NCycle)
                             if isa(obj.WaveformOrigin{ii},"ConstantWave")
                                 obj.WaveformOrigin{ii}.Frequency = obj.SamplingRate;
                             end
@@ -110,7 +110,7 @@ classdef WaveformList < handle
                                 PlayMode(sampleIdx) = "Repeat";
                                 sampleIdx = sampleIdx + 1;
                             end
-                        elseif isa(obj.WaveformOrigin{ii},"PartialPeriodicWaveform")
+                        elseif isa(obj.WaveformOrigin{ii},"PartialPeriodicWaveform") && ~isnan(obj.WaveformOrigin{ii}.NCycle)
                             sBefore = obj.WaveformOrigin{ii}.SampleBefore;
                             if ~isempty(sBefore)
                                 Sample{sampleIdx} = sBefore;
