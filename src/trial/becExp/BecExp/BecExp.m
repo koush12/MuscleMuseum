@@ -856,7 +856,7 @@ classdef BecExp < Trial
             % Scan the origin folder to find if a new log file is created.
             while newLogNum<1 && t<10
                 pause(tPause)
-                newLogNum = countFileNumberJava(originPath,".clg") - existedLogNum;
+                newLogNum = countFileNumber(originPath,".clg") - existedLogNum;
                 if newLogNum>1
                     obj.displayLog(">1 log files found")
                     return
