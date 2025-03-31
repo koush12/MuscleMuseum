@@ -150,8 +150,7 @@ classdef WaveformList < handle
                     [unionList,unionLimit,patchLimit] = findIntervalUnion(intervalList);
                     dt = obj.TimeStep;
                     nUnion = numel(unionList);
-                    for jj = 1:nUnion
-                        sampleIdx = sampleIdx + 1;
+                    for jj = 1:nUnion 
                         t = unionLimit(jj,1) : dt : unionLimit(jj,2);
                         sample = zeros(1,numel(t));
                         for kk = 1:numel(unionList{jj})
@@ -161,8 +160,8 @@ classdef WaveformList < handle
                         Sample{sampleIdx} = sample;
                         NRepeat(sampleIdx) = 1;
                         PlayMode(sampleIdx) = obj.RepeatMode;
-                        if jj ~= nUnion
-                            sampleIdx = sampleIdx + 1;
+                        sampleIdx = sampleIdx + 1;
+                        if jj ~= nUnion  
                             switch obj.PatchMethod
                                 case "Constant"
                                     patchConstant = obj.PatchConstant;
@@ -173,6 +172,7 @@ classdef WaveformList < handle
                             Sample{sampleIdx} = repmat(patchConstant,1,10);
                             NRepeat(sampleIdx) = floor(tPatch / dt / 10);
                             PlayMode(sampleIdx) = obj.RepeatMode;
+                            sampleIdx = sampleIdx + 1;
                         end
                     end
             end

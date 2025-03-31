@@ -9,6 +9,7 @@ classdef BecExp < Trial
         CloudCenter double % Cloud center [y_0,x_0] from previous measurement, in pixels
         AveragingMethod string = "StdErr" %Averaging method
         WaveformAssociation string
+        PhaseLockAssociation string
     end
 
     properties(Hidden)
@@ -336,7 +337,7 @@ classdef BecExp < Trial
             obj.displayLog("Trial #" + string(obj.SerialNumber) + ": Starting data acquisition and real-time analysis.")
             obj.countExistedLog
 
-            obj.setWaveform
+            obj.setHardware
             if obj.IsAutoAcquire
                 obj.Acquisition.connectCamera;
                 switch obj.Imaging.ImagingMethod
@@ -402,6 +403,9 @@ classdef BecExp < Trial
             end
             obj.Analyzer.Enabled = false;
 
+            obj.displayLog("Unlocking the phase locks.")
+            obj.unlock
+
             if obj.NCompletedRun == 0
                 obj.displayLog("No run has been acquired. Deleting this trial.")
                 for ii = 1:numel(obj.AnalysisMethod)
@@ -442,6 +446,9 @@ classdef BecExp < Trial
                 obj.Watcher.Enabled = false;
             end
             obj.Analyzer.Enabled = false;
+
+            obj.displayLog("Unlocking the phase locks.")
+            obj.unlock
 
             if obj.NCompletedRun == 0
                 obj.displayLog("No run has been acquired. Deleting this trial.")
@@ -856,7 +863,7 @@ classdef BecExp < Trial
             % Scan the origin folder to find if a new log file is created.
             while newLogNum<1 && t<10
                 pause(tPause)
-                newLogNum = countFileNumberJava(originPath,".clg") - existedLogNum;
+                newLogNum = countFileNumber(originPath,".clg") - existedLogNum;
                 if newLogNum>1
                     obj.displayLog(">1 log files found")
                     return
@@ -938,11 +945,18 @@ classdef BecExp < Trial
 
         end
 
-        function setWaveform(obj)
+        function setHardware(obj)
+            %% Get the HardwareControlPanel app    
+            hwApp = get(findall(0, 'Tag', "HwControlPanel"), 'RunningAppInstance');
+            if isempty(hwApp)
+                hwApp = HardwareControlPanel;
+            end
+            
+            %% Set Waveform
+            obj.displayLog("Checking waveform associations...")
             wa = obj.WaveformAssociation;
             if ~isempty(wa) && ~ismissing(wa) && wa ~="None"
-                % Check if the existing settings are corrent
-                obj.displayLog("Checking waveform associations...")
+                % Check if the existing settings are corrent     
                 wat = str2table(wa);
                 wgSettings = loadVar("WaveformGeneratorSetting","WaveformGeneratorSetting");
                 deleteIdx = [];
@@ -957,23 +971,44 @@ classdef BecExp < Trial
 
                 % Delete consistent settings
                 wat(deleteIdx,:) = [];
-                if isempty(wat)
-                    obj.displayLog("The associated waveforms have already been uploaded. Will not force uploading.")
-                    return
-                end
 
-                % Get the HardwareControlPanel app
-                obj.displayLog("Force uploading the associated waveforms.")
-                hwApp = get(findall(0, 'Tag', "HwControlPanel"), 'RunningAppInstance');
-                if isempty(hwApp)
-                    hwApp = HardwareControlPanel;
+                if isempty(wat)
+                    obj.displayLog("The associated waveforms have already been uploaded.")
+                else
+                    % Force to change settings
+                    obj.displayLog("Force uploading the associated waveforms.")
                 end
-                
-                % Force to change settings
-                hwApp.setWaveformAssociation(wat);
+            else
+                obj.displayLog("No waveform association found.")
+                wat = [];
             end
+
+            %% Set Phase Lock
+            obj.displayLog("Checking phase lock associations...")
+            pla = obj.PhaseLockAssociation;
+            if ~isempty(pla) && ~ismissing(pla) && pla ~="None"
+                plat = str2table(pla);
+                % Force to change settings
+                obj.displayLog("Force re-lock.")
+            else
+                obj.displayLog("No phase lock association found.")
+                plat = [];
+            end
+
+            %% upload
+            hwApp.setAssociation(WaveformAssociationTable = wat,PhaseLockAssociationTable = plat);
         end
 
+        function unlock(obj)
+            %% Get the HardwareControlPanel app
+            hwApp = get(findall(0, 'Tag', "HwControlPanel"), 'RunningAppInstance');
+            if isempty(hwApp)
+                hwApp = HardwareControlPanel;
+            end
+
+            %% unlock all
+            hwApp.unlock;
+        end
         function updateHardware(obj)
             %UPDATEHARDWARE Summary of this function goes here
             %   Detailed explanation goes here
