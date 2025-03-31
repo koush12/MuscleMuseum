@@ -3,7 +3,7 @@ classdef (Abstract) VescentPhaseLock < PhaseLock
     %   Detailed explanation goes here
     
     properties
-        Serialport Serialport
+        Serialport internal.Serialport
     end
     
     methods
@@ -40,12 +40,15 @@ classdef (Abstract) VescentPhaseLock < PhaseLock
                 error("PhaseLock box was deleted")
             end
             writeline(obj.Serialport,"SERVO?")
-            s = readline(obj.Serialport);
+            s = strtrim(readline(obj.Serialport));
             if s == "Off"
                 obj.Status = false;
             else
                 obj.Status = true;
             end
+            writeline(obj.Serialport,"BNTGT?")
+            s = strtrim(readline(obj.Serialport));
+            obj.CurrentFrequency = double(s) * 1e6;
         end
 
         function lock(obj)
@@ -53,7 +56,7 @@ classdef (Abstract) VescentPhaseLock < PhaseLock
                 error("Must specify the lock frequency")
             end
             obj.unlock
-            cm = "BNTGT " + num2str(obj.Frequency);
+            cm = "BNTGT " + num2str(obj.Frequency * 1e-6);
             writeline(obj.Serialport,cm);
             readline(obj.Serialport);
             writeline(obj.Serialport,"SERVO ON");

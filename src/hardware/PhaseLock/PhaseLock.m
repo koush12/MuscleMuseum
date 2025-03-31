@@ -3,7 +3,13 @@ classdef (Abstract) PhaseLock < Hardware
     %   Detailed explanation goes here
     
     properties
-        Frequency double {mustBePositive}
+        Frequency double {mustBePositive} % in Hz
+        VariableName string
+    end
+
+    properties (SetAccess = protected)
+        FrequencyLimit (1,2) double % in Hz [lower,upper]
+        CurrentFrequency double % in Hz
         Status logical
     end
     
@@ -15,7 +21,18 @@ classdef (Abstract) PhaseLock < Hardware
                 resourceName string
                 name string = string.empty
             end
-            obj@Hardware(resourceName,name)
+            obj@Hardware(resourceName,name,false)
+        end
+
+        function set.Frequency(obj,val)
+            if isempty(obj.FrequencyLimit)
+                obj.Frequency = val;
+            elseif val<obj.FrequencyLimit(1) || val>obj.FrequencyLimit(2)
+                error("Frequency is out of the range [" + num2str(obj.Frequency(1)*1e-6)  + " MHz, " + ...
+                    num2str(obj.Frequency(2)*1e-6)  + " MHz]")
+            else
+                obj.Frequency = val;
+            end
         end
     end
 

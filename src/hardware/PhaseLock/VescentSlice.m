@@ -7,16 +7,14 @@ classdef VescentSlice < VescentPhaseLock
     end
     
     methods
-        function obj = VescentSlice(inputArg1,inputArg2)
-            %VESCENTSLICE Construct an instance of this class
-            %   Detailed explanation goes here
-            obj.Property1 = inputArg1 + inputArg2;
-        end
-        
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function obj = VescentSlice(resourceName,name)
+            arguments
+                resourceName string
+                name string = string.empty
+            end
+            obj@VescentPhaseLock(resourceName,name);
+            obj.Model = "Slice";
+            obj.FrequencyLimit = [10,9500] * 1e6;
         end
     end
 end

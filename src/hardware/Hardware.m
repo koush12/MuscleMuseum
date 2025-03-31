@@ -16,22 +16,25 @@ classdef (Abstract) Hardware < handle & matlab.mixin.SetGetExactNames
     end
 
     methods
-        function obj = Hardware(resourceName,name)
+        function obj = Hardware(resourceName,name,isSaving)
             arguments
                 resourceName string
                 name string = string.empty
+                isSaving logical = true
             end
             obj.ResourceName = resourceName;
             obj.Name = name;
 
             % Set logging folder
-            load("Config.mat","ComputerConfig")
-            obj.ParentPath = ComputerConfig.HardwareLogOrigin;
-            if isfolder(obj.ParentPath)
-                obj.DataPath = fullfile(obj.ParentPath,name);
-                createFolder(obj.DataPath);
-            else
-                warning("Can not find the hardware log folder. Check your setConfig")
+            if isSaving
+                load("Config.mat","ComputerConfig")
+                obj.ParentPath = ComputerConfig.HardwareLogOrigin;
+                if isfolder(obj.ParentPath)
+                    obj.DataPath = fullfile(obj.ParentPath,name);
+                    createFolder(obj.DataPath);
+                else
+                    warning("Can not find the hardware log folder. Check your setConfig")
+                end
             end
         end
     end
