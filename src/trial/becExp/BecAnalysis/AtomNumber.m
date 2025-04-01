@@ -26,7 +26,7 @@ classdef AtomNumber < BecAnalysis
 
     properties 
         IsShowNormalized logical = true;
-        FitMethod = "None"
+        FitMethod string = "None"
         FitDataRaw
         FitDataThermal
         FitDataCondensate

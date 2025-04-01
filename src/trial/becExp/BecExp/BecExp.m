@@ -287,6 +287,7 @@ classdef BecExp < Trial
                             obj.DensityFit.FitMethod = obj.ConfigParameter.DensityFitMethod;
                         case "AtomNumber"
                             obj.AtomNumber.YLim = [0,obj.ConfigParameter.AtomNumberYLim];
+                            obj.AtomNumber.FitMethod = obj.ConfigParameter.AtomNumberFitMethod;
                         case "CenterFit"
                             obj.CenterFit.FitMethod = obj.ConfigParameter.CenterFitMethod;
                     end
