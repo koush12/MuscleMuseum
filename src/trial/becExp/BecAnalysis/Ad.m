@@ -109,6 +109,31 @@ classdef Ad < BecAnalysis
                 case "UniformStrongLight2"
 
                 case "StrongLight2"
+                    
+                case "PhaseContrastImaging"
+                    %Needs to obtain phase plate for imaging, assume
+                    %phi=pi/2 for now, should be between -pi and pi
+                    phi=-pi/2; %Assumes additional thickness, use minus for etched
+                    delta=100e6; %Frequency Detuning, should be retrieved from hardwareRoi but is hardcoded for now. Positive means red-detuned
+                    obj.AdData(:,:,runIdx)=becExp.Od.ImageRatio(:,:,runIdx);
+
+                    %Correct for spots that are outside of the expected
+                    %ratios for the given phase spot plate.
+                    Imin=min((3-2*cos(phi)-4*sin(phi/2)), (3-2*cos(phi)+4*sin(phi/2)));
+                    Imax=max((3-2*cos(phi)-4*sin(phi/2)), (3-2*cos(phi)+4*sin(phi/2)));
+                    obj.AdData(:,:,runIdx)=min(obj.AdData(:,:,runIdx), Imax);
+                    obj.AdData(:,:,runIdx)=max(obj.AdData(:,:,runIdx), Imin);
+
+                    %Calculate phase shift;
+                    obj.AdData(:,:,runIdx)=phi/2+asin((obj.AdData(:,:,runIdx)-(3-2*cos(phi)))/(4*sin(phi/2)));
+
+                    %Convert phase shift to density (for within range);
+                    epsilon0=8.8541878188e-12; %Si units for vacuum permitivity
+                    electroncharge=1.602e-19; %Electron Charge in Coulombs
+                    mLi=1.1649273e-26; %Mass of Li in kg
+                    alpha=electroncharge^2/(mLi*delta*(2*4.46784587e14)); %
+                    obj.AdData(:,:,runIdx)=obj.AdData(:,:,runIdx)/(671e-9/(2*pi))*2*epsilon0/alpha;
+                    
             end
 
             % Update AdPreviewer
