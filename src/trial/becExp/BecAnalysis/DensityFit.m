@@ -194,16 +194,16 @@ classdef DensityFit < BecAnalysis
             end
 
             %% Do fit
-            p = gcp('nocreate');
-            if ~isempty(p)
-                parfor ii = 1:numel(fitData)
+            % p = gcp('nocreate');
+            % if ~isempty(p)
+                % parfor ii = 1:numel(fitData)
                     fitData(ii) = fitData(ii).do;
-                end
-            else
+                % end
+            % else
                 for ii = 1:numel(fitData)
                     fitData(ii) = fitData(ii).do;
                 end
-            end
+            % end
             obj.FitData(:,runIdx,1:nSub) = fitData;
 
             %% Assign values to properties
