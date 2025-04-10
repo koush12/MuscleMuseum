@@ -598,22 +598,22 @@ classdef BecExp < Trial
             roi = obj.Roi;
             roiSize = roi.CenterSize(3:4);
             roiData = zeros([roiSize,nRun,3]);
-            p = gcp('nocreate');
-            if isempty(p)
+            % p = gcp('nocreate');
+            % if isempty(p)
                 for ii = 1:nRun
                     for jj = 1:3
                         roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
                     end
                 end
-            else
-                parfevalOnAll(@warning,0,'off','all');
-                parfor ii = 1:nRun
-                    for jj = 1:3
-                        roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
-                    end
-                end
-                parfevalOnAll(@warning,0,'on','all');
-            end
+            % else
+                % parfevalOnAll(@warning,0,'off','all');
+                % parfor ii = 1:nRun
+                    % for jj = 1:3
+                        % roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
+                    % end
+                % end
+                % parfevalOnAll(@warning,0,'on','all');
+            % end
         end
 
         function deleteRun(obj,runIdx)
