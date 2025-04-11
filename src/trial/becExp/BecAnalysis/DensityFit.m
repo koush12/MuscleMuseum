@@ -194,17 +194,33 @@ classdef DensityFit < BecAnalysis
             end
 
             %% Do fit
-            % p = gcp('nocreate');
-            % if ~isempty(p)
-                % parfor ii = 1:numel(fitData)
-                    fitData(ii) = fitData(ii).do;
-                % end
-            % else
+            p = gcp('nocreate');
+            if isempty(p) || nRun == 1 || p.NumWorkers <= 2
                 for ii = 1:numel(fitData)
                     fitData(ii) = fitData(ii).do;
                 end
-            % end
+            else
+                n = numel(fitData);
+                futures(n) = parallel.FevalFuture;
+
+                % Submit parfeval jobs
+                for ii = 1:n
+                    futures(ii) = parfeval(@doFit, 1, fitData(ii));  % 1 output
+                end
+
+                % Collect results as they finish
+                results = fitData;  % preallocate with same type
+                for ii = 1:n
+                    [completedIdx, value] = fetchNext(futures);
+                    results(completedIdx) = value;
+                end
+                fitData = reshape(results,size(fitData));
+            end
             obj.FitData(:,runIdx,1:nSub) = fitData;
+
+            function results = doFit(fitObj)
+                results = fitObj.do;
+            end
 
             %% Assign values to properties
             for ii = runIdx

@@ -598,22 +598,40 @@ classdef BecExp < Trial
             roi = obj.Roi;
             roiSize = roi.CenterSize(3:4);
             roiData = zeros([roiSize,nRun,3]);
-            % p = gcp('nocreate');
-            % if isempty(p)
+            p = gcp('nocreate');
+            if isempty(p) || p.NumWorkers <= 2
                 for ii = 1:nRun
                     for jj = 1:3
                         roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
                     end
                 end
-            % else
-                % parfevalOnAll(@warning,0,'off','all');
-                % parfor ii = 1:nRun
-                    % for jj = 1:3
-                        % roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
-                    % end
-                % end
-                % parfevalOnAll(@warning,0,'on','all');
-            % end
+            else
+                parfevalOnAll(@warning,0,'off','all');
+
+                % Preallocate future array
+                futures(nRun) = parallel.FevalFuture;
+
+                % Submit async jobs
+                for ii = 1:nRun
+                    futures(ii) = parfeval(@processOneRun, 1,runPath(ii,:));
+                end
+
+                % Collect results
+                for ii = 1:nRun
+                    [completedIdx, value] = fetchNext(futures);
+                    roiData(:,:,completedIdx,:) = value;  % assign the 3-jj slice
+                end
+
+                parfevalOnAll(@warning,0,'on','all');
+            end
+
+            % Read one run function
+            function data = processOneRun(filePaths)
+                data = zeros([roiSize, 1, 3]);  % adjust dimensions as needed
+                for kk = 1:3
+                    data(:,:,1,kk) = roi.select(acq.killBadPixel(double(imread(filePaths(kk)))));
+                end
+            end
         end
 
         function deleteRun(obj,runIdx)
