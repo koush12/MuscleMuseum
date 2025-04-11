@@ -128,7 +128,7 @@ classdef Chart < handle
 
             if ~obj.IsGif
                 % Check if figure is valid
-                if ~isvalid(obj.Figure)
+                if isempty(obj.Figure) || ~isvalid(obj.Figure)
                     warning("Figure [" + obj.Name+"]" + " was not found." + ...
                         " It might have been closed.")
                     return
