@@ -200,7 +200,7 @@ classdef BecExp < Trial
                 %% Fetch Cicero log data and write into CiceroData
                 isFetched = obj.fetchCiceroLog(currentRunNumber);
                 if ~isFetched %Error handling when Cicero crashes
-                    obj.displayLog("Failed fetching the Cicero data. Deleting the latest images")
+                    obj.displayLog("Failed fetching the Cicero data. Deleting the latest images","warning")
                     fList = dir(fullfile(obj.DataPath,"*"+obj.DataFormat));
                     imageList = string({fList.name});
                     if ~isempty(imageList)
@@ -235,6 +235,12 @@ classdef BecExp < Trial
                 %% Fetch Hardware log data
                 obj.fetchHardwareLog(currentRunNumber);
 
+                %% Check if the scanned parameter is correct
+                if isempty(obj.ScannedParameterList)
+                    obj.displayLog("Can not find [" + obj.ScannedParameter + "]" + ...
+                        " in Cicero or Hardware Variable List. Please correct and restart.","error")
+                end
+                
                 %% Update Hardware
                 obj.updateHardware
 
@@ -561,7 +567,7 @@ classdef BecExp < Trial
                         end
                     end
                 end
-
+                obj.displayLog("Refresh done.")
             end
         end
 
@@ -641,7 +647,7 @@ classdef BecExp < Trial
             if isempty(runIdx)
                 return
             elseif obj.IsAcquiring
-                obj.displayLog("Still saving images. Can not delete now.")
+                obj.displayLog("Still saving images. Can not delete now.","warning")
                 return
             end
             obj.displayLog("Deleting Run " + join("#"+string(runIdx),", ") + ".")
@@ -884,14 +890,14 @@ classdef BecExp < Trial
                 pause(tPause)
                 newLogNum = countFileNumber(originPath,".clg") - existedLogNum;
                 if newLogNum>1
-                    obj.displayLog(">1 log files found")
+                    obj.displayLog(">1 log files found","warning")
                     return
                 end
                 t = t + tPause;
             end
 
             if t>= 10
-                obj.displayLog("Can not find a log file in 10 seconds")
+                obj.displayLog("Can not find a log file in 10 seconds","warning")
                 return
             end
 
@@ -917,7 +923,7 @@ classdef BecExp < Trial
             end
 
             if t >= 5
-                obj.displayLog("Can not move the log file in 5 seconds")
+                obj.displayLog("Can not move the log file in 5 seconds","warning")
                 return
             end
 
