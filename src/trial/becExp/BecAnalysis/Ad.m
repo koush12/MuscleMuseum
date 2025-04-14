@@ -113,12 +113,16 @@ classdef Ad < BecAnalysis
                 case "PhaseContrastImaging"
                     %Needs to obtain phase plate for imaging, assume
                     %phi=pi/2 for now, should be between -pi and pi
-                    phi=-pi/2; %Assumes additional thickness, use minus for etched
-                    delta=100e6; %Frequency Detuning, should be retrieved from hardwareRoi but is hardcoded for now. Positive means red-detuned
+                    phi=-pi/3; %Assumes additional thickness, use minus for etched
+                    freqlistPCI_Imaging=becExp.HardwareData.hw_PCIf;
+                    freqPCI_Imaging=freqlistPCI_Imaging(runIdx);
+                    freqlistNI_Imaging=becExp.HardwareData.hw_NiImaging ;
+                    freqNI_Imaging=freqlistNI_Imaging(runIdx);
+                    delta=freqNI_Imaging-freqPCI_Imaging; %Frequency Detuning, should be retrieved from hardwareRoi but is hardcoded for now. Positive means red-detuned
                     obj.AdData(:,:,runIdx)=becExp.Od.ImageRatio(:,:,runIdx);
 
                     %Correct for spots that are outside of the expected
-                    %ratios for the given phase spot plate.
+                    %ratios flor the given phase spot plate.
                     Imin=min((3-2*cos(phi)-4*sin(phi/2)), (3-2*cos(phi)+4*sin(phi/2)));
                     Imax=max((3-2*cos(phi)-4*sin(phi/2)), (3-2*cos(phi)+4*sin(phi/2)));
                     obj.AdData(:,:,runIdx)=min(obj.AdData(:,:,runIdx), Imax);
