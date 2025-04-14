@@ -234,18 +234,18 @@ classdef BecExp < Trial
 
                 %% Fetch Hardware log data
                 obj.fetchHardwareLog(currentRunNumber);
-
-                %% Check if the scanned parameter is correct
-                if isempty(obj.ScannedParameterList)
-                    obj.displayLog("Can not find [" + obj.ScannedParameter + "]" + ...
-                        " in Cicero or Hardware Variable List. Please correct and restart.","error")
-                end
                 
                 %% Update Hardware
                 obj.updateHardware
 
                 %% Update ScopeData
                 obj.updateScopeData
+
+                %% Check if the scanned parameter is correct
+                if isempty(obj.ScannedParameterList)
+                    obj.displayLog("Can not find [" + obj.ScannedParameter + "]" + ...
+                        " in Cicero or Hardware Variable List or scope data list. Please correct and restart.","error")
+                end
 
                 %% Show Images
                 obj.displayLog("Updating the figures.")
