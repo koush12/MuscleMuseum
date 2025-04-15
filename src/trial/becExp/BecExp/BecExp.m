@@ -575,8 +575,10 @@ classdef BecExp < Trial
             arguments
                 obj BecExp
             end
-            for ii = 1:numel(obj.AnalysisMethod)
-                obj.(obj.AnalysisMethod(ii)).updateFigure(obj.NCompletedRun);
+            if obj.NCompletedRun >= 1
+                for ii = 1:numel(obj.AnalysisMethod)
+                    obj.(obj.AnalysisMethod(ii)).updateFigure(obj.NCompletedRun);
+                end
             end
         end
 
