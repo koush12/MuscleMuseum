@@ -114,16 +114,16 @@ classdef Ad < BecAnalysis
                     %Needs to obtain phase plate for imaging, assume
                     %phi=pi/2 for now, should be between -pi and pi
                     phi=-pi/3; %Assumes additional thickness, use minus for etched
-                    freqlistPCI_Imaging=becExp.HardwareData.hw_PCIf;
+                    freqlistPCI_Imaging=becExp.HardwareData.hw_ImagingPci;
                     freqPCI_Imaging=freqlistPCI_Imaging(runIdx);
 
                     switch becExp.Imaging.ImagingStage
                         case "NI"
-                            freqlist_Imaging=becExp.HardwareData.hw_NiImaging ;
+                            freqlist_Imaging=becExp.HardwareData.hw_ImagingNi ;
                         case "LF" 
-                            freqlist_Imaging=becExp.HardwareData.hw_LfImaging ;
+                            freqlist_Imaging=becExp.HardwareData.hw_ImagingLf ;
                         case "HF"
-                            freqlist_Imaging=becExp.HardwareData.hw_HfImaging ;
+                            freqlist_Imaging=becExp.HardwareData.hw_ImagingHf ;
                     end
                     % freqlistNI_Imaging=becExp.HardwareData.hw_NiImaging ;
                     freq_Imaging=freqlist_Imaging(runIdx);
