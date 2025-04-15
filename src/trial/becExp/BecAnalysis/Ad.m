@@ -116,9 +116,18 @@ classdef Ad < BecAnalysis
                     phi=-pi/3; %Assumes additional thickness, use minus for etched
                     freqlistPCI_Imaging=becExp.HardwareData.hw_PCIf;
                     freqPCI_Imaging=freqlistPCI_Imaging(runIdx);
-                    freqlistNI_Imaging=becExp.HardwareData.hw_NiImaging ;
-                    freqNI_Imaging=freqlistNI_Imaging(runIdx);
-                    delta=freqNI_Imaging-freqPCI_Imaging; %Frequency Detuning, should be retrieved from hardwareRoi but is hardcoded for now. Positive means red-detuned
+
+                    switch becExp.Imaging.ImagingStage
+                        case "NI"
+                            freqlist_Imaging=becExp.HardwareData.hw_NiImaging ;
+                        case "LF" 
+                            freqlist_Imaging=becExp.HardwareData.hw_LfImaging ;
+                        case "HF"
+                            freqlist_Imaging=becExp.HardwareData.hw_HfImaging ;
+                    end
+                    % freqlistNI_Imaging=becExp.HardwareData.hw_NiImaging ;
+                    freq_Imaging=freqlist_Imaging(runIdx);
+                    delta=freq_Imaging-freqPCI_Imaging; %Frequency Detuning, should be retrieved from hardwareRoi but is hardcoded for now. Positive means red-detuned
                     obj.AdData(:,:,runIdx)=becExp.Od.ImageRatio(:,:,runIdx);
 
                     %Correct for spots that are outside of the expected
