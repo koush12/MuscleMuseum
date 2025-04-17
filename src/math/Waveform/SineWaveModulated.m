@@ -40,21 +40,7 @@ classdef SineWaveModulated < ModulatedWaveform
             t0 = obj.StartTime;
             phi = obj.Phase;
             offset = obj.Offset;
-            if ~isempty(obj.AmplitudeModuation)
-                ampMod = obj.AmplitudeModuation.TimeFunc;
-            else
-                ampMod = @(t) 0;
-            end
-            if ~isempty(obj.FrequencyModulation)
-                freqMod = obj.FrequencyModulation.TimeFunc;
-            else
-                freqMod = @(t) 0;
-            end
-            if ~isempty(obj.PhaseModulation)
-                phaseMod = obj.PhaseModulation.TimeFunc;
-            else
-                phaseMod = @(t) 0;
-            end
+            [ampMod,freqMod,phaseMod] = obj.getModulation;
 
             func = @tFunc;
             function waveOut = tFunc(t)

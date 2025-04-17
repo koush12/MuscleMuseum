@@ -17,6 +17,27 @@ classdef (Abstract) ModulatedWaveform < Waveform
             %MODULATIONWAVE Construct an instance of this class
             %   Detailed explanation goes here
         end
+
+        function [ampMod,freqMod,phaseMod] = getModulation(obj)
+            if ~isempty(obj.AmplitudeModuation)
+                obj.AmplitudeModuation.SamplingRate = obj.SamplingRate;
+                ampMod = obj.AmplitudeModuation.TimeFunc;
+            else
+                ampMod = @(t) 0;
+            end
+            if ~isempty(obj.FrequencyModulation)
+                obj.FrequencyModulation.SamplingRate = obj.SamplingRate;
+                freqMod = obj.FrequencyModulation.TimeFunc;
+            else
+                freqMod = @(t) 0;
+            end
+            if ~isempty(obj.PhaseModulation)
+                obj.PhaseModulation.SamplingRate = obj.SamplingRate;
+                phaseMod = obj.PhaseModulation.TimeFunc;
+            else
+                phaseMod = @(t) 0;
+            end
+        end
     end
 end
 
