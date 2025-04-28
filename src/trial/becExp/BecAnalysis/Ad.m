@@ -144,7 +144,9 @@ classdef Ad < BecAnalysis
                     epsilon0=8.8541878188e-12; %Si units for vacuum permitivity
                     electroncharge=1.602e-19; %Electron Charge in Coulombs
                     mLi=1.1649273e-26; %Mass of Li in kg
-                    alpha=electroncharge^2/(mLi*2*pi*delta*(2*4.46784587e14)); %
+                    % alpha=electroncharge^2/(mLi*2*pi*delta*(2*4.46784587e14)); %
+                    a0=5.29177210544e-11;
+                    
                     
 
 
@@ -160,7 +162,19 @@ classdef Ad < BecAnalysis
                     %     omegaD2 * abs(dipoleD2)^2 / (omegaD2^2 - omegaL^2));
                     % alpha = alpha / hbar / 2 / pi;
 
-                    obj.AdData(:,:,runIdx)=obj.AdData(:,:,runIdx)/(671e-9/(2*pi))*2*epsilon0/alpha/1e13;
+                    %alternatecalculations2
+                    omegaD1 = 2 * pi * becExp.Atom.D1.Frequency;
+                    omegaD2 = 2 * pi * becExp.Atom.D2.Frequency;
+                    omegaL = omegaD2-2*pi*delta;
+                    dipoleD1 = becExp.Atom.D1.ReducedDipoleMatrixElement;
+                    dipoleD2 = becExp.Atom.D2.ReducedDipoleMatrixElement;
+                    hbar = Constants.SI("hbar");
+
+                    alpha = 2/3/hbar * (abs(dipoleD1)^2 / (omegaD1 - omegaL) +...
+                        abs(dipoleD2)^2 / (omegaD2 - omegaL));
+                    
+
+                    obj.AdData(:,:,runIdx)=obj.AdData(:,:,runIdx)/(2*pi/(671e-9))*2*epsilon0/alpha;
                     
             end
 
