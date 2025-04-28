@@ -1034,7 +1034,11 @@ classdef BecExp < Trial
             end
 
             %% unlock all
-            hwApp.unlock;
+            try
+                hwApp.unlock;
+            catch
+                obj.displayLog("Can not unlock. Please check if phase lock is connected","warning")
+            end
         end
         function updateHardware(obj)
             %UPDATEHARDWARE Summary of this function goes here
