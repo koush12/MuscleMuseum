@@ -23,8 +23,8 @@ classdef OpticalLattice < OpticalPotential
     end
 
     properties (Constant)
-        % BandIndexMaxFourierDefault = 101
-        BandIndexMaxFourierDefault = 51
+        BandIndexMaxFourierDefault = 101
+        % BandIndexMaxFourierDefault = 51
     end
 
     properties (Dependent)

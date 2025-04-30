@@ -89,18 +89,16 @@ classdef LatticeSeSim1D < SpaceTimeSim
 
             %% Construct modulations
             if isempty(obj.LatticeModulation)
-                obj.LatticeModulation = {Modulation(...
-                    depth = 0, ...
+                obj.LatticeModulation = {SineWave(...
+                    amplitude = 0, ...
                     duration = 1e-3, ...
-                    frequency = 1, ...
-                    timing = 0);};
+                    frequency = 1);};
             end
             if isempty(obj.FieldModulation)
-                obj.FieldModulation = {Modulation(...
-                    depth = 0, ...
+                obj.FieldModulation = {SineWave(...
+                    amplitude = 0, ...
                     duration = 1e-3, ...
-                    frequency = 1, ...
-                    timing = 0);};
+                    frequency = 1);};
             end
 
             %% Construct OpticalLattice and MagneticPotential
@@ -156,28 +154,28 @@ classdef LatticeSeSim1D < SpaceTimeSim
                     case "laser"
                         lFunc = obj.OpticalLattice(ii).spaceFunc;
                         bFunc = obj.MagneticPotential(1).spaceFuncHighField;
-                        lmFunc = {obj.LatticeModulation{1}.timeFunc};
-                        fmFunc = {obj.FieldModulation{1}.timeFunc};
+                        lmFunc = {obj.LatticeModulation{1}.TimeFunc};
+                        fmFunc = {obj.FieldModulation{1}.TimeFunc};
                     case "magneticField"
                         lFunc = obj.OpticalLattice(1).spaceFunc;
                         bFunc = obj.MagneticPotential(ii).spaceFuncHighField;
-                        lmFunc = {obj.LatticeModulation{1}.timeFunc};
-                        fmFunc = {obj.FieldModulation{1}.timeFunc};
+                        lmFunc = {obj.LatticeModulation{1}.TimeFunc};
+                        fmFunc = {obj.FieldModulation{1}.TimeFunc};
                     case "latticeModulation"
                         lFunc = obj.OpticalLattice(1).spaceFunc;
                         bFunc = obj.MagneticPotential(1).spaceFuncHighField;
-                        lmFunc = {obj.LatticeModulation{ii}.timeFunc};
-                        fmFunc = {obj.FieldModulation{1}.timeFunc};
+                        lmFunc = {obj.LatticeModulation{ii}.TimeFunc};
+                        fmFunc = {obj.FieldModulation{1}.TimeFunc};
                     case "fieldModulation"
                         lFunc = obj.OpticalLattice(1).spaceFunc;
                         bFunc = obj.MagneticPotential(1).spaceFuncHighField;
-                        lmFunc = {obj.LatticeModulation{1}.timeFunc};
-                        fmFunc = {obj.FieldModulation{ii}.timeFunc};
+                        lmFunc = {obj.LatticeModulation{1}.TimeFunc};
+                        fmFunc = {obj.FieldModulation{ii}.TimeFunc};
                     case "initialCondition"
                         lFunc = obj.OpticalLattice(1).spaceFunc;
                         bFunc = obj.MagneticPotential(1).spaceFuncHighField;
-                        lmFunc = {obj.LatticeModulation{1}.timeFunc};
-                        fmFunc = {obj.FieldModulation{1}.timeFunc};
+                        lmFunc = {obj.LatticeModulation{1}.TimeFunc};
+                        fmFunc = {obj.FieldModulation{1}.TimeFunc};
                 end
                 Vl = lFunc(r).';
                 Vb = bFunc(r).';
