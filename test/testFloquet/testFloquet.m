@@ -1,4 +1,4 @@
-%%
+ %%
 atom = Alkali("Lithium7");
 laser = GaussianBeam( ...
     wavelength = 1064e-9,...
@@ -10,9 +10,11 @@ laser = GaussianBeam( ...
 ol = OpticalLattice(atom,laser);
 kL = ol.Laser.AngularWavenumber;
 Er = ol.RecoilEnergy;
-ol.DepthSpec = 8.8458 * Er;
+% ol.DepthSpec = 8.8458 * Er;
+ol.DepthSpec = 8.25 * Er;
 ol.updateIntensity;
-nq = 2e4;
+% nq = 2e4;
+nq = 1e3;
 ol.computeAll1D(nq,2)
 Fjn = ol.BlochStateFourier;
 lambda = laser.Wavelength;

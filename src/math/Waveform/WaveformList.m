@@ -161,18 +161,20 @@ classdef WaveformList < handle
                         NRepeat(sampleIdx) = 1;
                         PlayMode(sampleIdx) = obj.RepeatMode;
                         sampleIdx = sampleIdx + 1;
-                        if jj ~= nUnion  
-                            switch obj.PatchMethod
-                                case "Constant"
-                                    patchConstant = obj.PatchConstant;
-                                case "Continue"
-                                    patchConstant = sample(end);
+                        if jj ~= nUnion
+                            if unionLimit(jj,2) ~= unionLimit(jj+1,1)
+                                switch obj.PatchMethod
+                                    case "Constant"
+                                        patchConstant = obj.PatchConstant;
+                                    case "Continue"
+                                        patchConstant = sample(end);
+                                end
+                                tPatch = patchLimit(jj,2) - patchLimit(jj,1);
+                                Sample{sampleIdx} = repmat(patchConstant,1,10);
+                                NRepeat(sampleIdx) = floor(tPatch / dt / 10);
+                                PlayMode(sampleIdx) = obj.RepeatMode;
+                                sampleIdx = sampleIdx + 1;
                             end
-                            tPatch = patchLimit(jj,2) - patchLimit(jj,1);
-                            Sample{sampleIdx} = repmat(patchConstant,1,10);
-                            NRepeat(sampleIdx) = floor(tPatch / dt / 10);
-                            PlayMode(sampleIdx) = obj.RepeatMode;
-                            sampleIdx = sampleIdx + 1;
                         end
                     end
             end

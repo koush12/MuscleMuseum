@@ -7,7 +7,7 @@ classdef (Abstract) ModulatedWaveform < Waveform
         Offset double = 0 % Offest, usually in Volts.
         Frequency double {mustBePositive} % In Hz
         Phase double % In radians
-        AmplitudeModuation WaveformList
+        AmplitudeModulation WaveformList
         FrequencyModulation WaveformList
         PhaseModulation WaveformList
     end
@@ -16,6 +16,27 @@ classdef (Abstract) ModulatedWaveform < Waveform
         function obj = ModulatedWaveform()
             %MODULATIONWAVE Construct an instance of this class
             %   Detailed explanation goes here
+        end
+
+        function [ampMod,freqMod,phaseMod] = getModulation(obj)
+            if ~isempty(obj.AmplitudeModulation)
+                obj.AmplitudeModulation.SamplingRate = obj.SamplingRate;
+                ampMod = obj.AmplitudeModulation.TimeFunc;
+            else
+                ampMod = @(t) 0;
+            end
+            if ~isempty(obj.FrequencyModulation)
+                obj.FrequencyModulation.SamplingRate = obj.SamplingRate;
+                freqMod = obj.FrequencyModulation.TimeFunc;
+            else
+                freqMod = @(t) 0;
+            end
+            if ~isempty(obj.PhaseModulation)
+                obj.PhaseModulation.SamplingRate = obj.SamplingRate;
+                phaseMod = obj.PhaseModulation.TimeFunc;
+            else
+                phaseMod = @(t) 0;
+            end
         end
     end
 end

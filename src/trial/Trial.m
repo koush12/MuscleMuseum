@@ -136,13 +136,23 @@ classdef (Abstract) Trial < handle & matlab.mixin.SetGetExactNames & dynamicprop
             fclose(fid);
         end
 
-        function displayLog(obj,str)
-            if isempty(obj.ControlApp)
-                disp(str)
-            elseif ~isvalid(obj.ControlApp)
-                disp(str)
+        function displayLog(obj,str,logType)
+            arguments
+                obj 
+                str string
+                logType string = "normal"
+            end
+            if isempty(obj.ControlApp) || ~isvalid(obj.ControlApp)
+                switch logType
+                    case "warning"
+                        warning(str)
+                    case "error"
+                        error(str)
+                    otherwise
+                        disp(str)
+                end         
             else
-                obj.ControlApp.displayLog(str)
+                obj.ControlApp.displayLog(str,logType)
             end
         end
 

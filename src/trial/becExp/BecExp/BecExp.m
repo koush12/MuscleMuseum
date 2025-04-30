@@ -200,7 +200,7 @@ classdef BecExp < Trial
                 %% Fetch Cicero log data and write into CiceroData
                 isFetched = obj.fetchCiceroLog(currentRunNumber);
                 if ~isFetched %Error handling when Cicero crashes
-                    obj.displayLog("Failed fetching the Cicero data. Deleting the latest images")
+                    obj.displayLog("Failed fetching the Cicero data. Deleting the latest images","warning")
                     fList = dir(fullfile(obj.DataPath,"*"+obj.DataFormat));
                     imageList = string({fList.name});
                     if ~isempty(imageList)
@@ -234,12 +234,18 @@ classdef BecExp < Trial
 
                 %% Fetch Hardware log data
                 obj.fetchHardwareLog(currentRunNumber);
-
+                
                 %% Update Hardware
                 obj.updateHardware
 
                 %% Update ScopeData
                 obj.updateScopeData
+
+                %% Check if the scanned parameter is correct
+                if isempty(obj.ScannedParameterList)
+                    obj.displayLog("Can not find [" + obj.ScannedParameter + "]" + ...
+                        " in Cicero or Hardware Variable List or scope data list. Please correct and restart.","error")
+                end
 
                 %% Show Images
                 obj.displayLog("Updating the figures.")
@@ -287,6 +293,7 @@ classdef BecExp < Trial
                             obj.DensityFit.FitMethod = obj.ConfigParameter.DensityFitMethod;
                         case "AtomNumber"
                             obj.AtomNumber.YLim = [0,obj.ConfigParameter.AtomNumberYLim];
+                            obj.AtomNumber.FitMethod = obj.ConfigParameter.AtomNumberFitMethod;
                         case "CenterFit"
                             obj.CenterFit.FitMethod = obj.ConfigParameter.CenterFitMethod;
                     end
@@ -560,7 +567,7 @@ classdef BecExp < Trial
                         end
                     end
                 end
-
+                obj.displayLog("Refresh done.")
             end
         end
 
@@ -568,8 +575,10 @@ classdef BecExp < Trial
             arguments
                 obj BecExp
             end
-            for ii = 1:numel(obj.AnalysisMethod)
-                obj.(obj.AnalysisMethod(ii)).updateFigure(obj.NCompletedRun);
+            if obj.NCompletedRun >= 1
+                for ii = 1:numel(obj.AnalysisMethod)
+                    obj.(obj.AnalysisMethod(ii)).updateFigure(obj.NCompletedRun);
+                end
             end
         end
 
@@ -599,7 +608,7 @@ classdef BecExp < Trial
             roiSize = roi.CenterSize(3:4);
             roiData = zeros([roiSize,nRun,3]);
             p = gcp('nocreate');
-            if isempty(p)
+            if isempty(p) || p.NumWorkers <= 2
                 for ii = 1:nRun
                     for jj = 1:3
                         roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
@@ -607,12 +616,30 @@ classdef BecExp < Trial
                 end
             else
                 parfevalOnAll(@warning,0,'off','all');
-                parfor ii = 1:nRun
-                    for jj = 1:3
-                        roiData(:,:,ii,jj) = roi.select(acq.killBadPixel(double(imread(runPath(ii,jj)))));
-                    end
+
+                % Preallocate future array
+                futures(nRun) = parallel.FevalFuture;
+
+                % Submit async jobs
+                for ii = 1:nRun
+                    futures(ii) = parfeval(@processOneRun, 1,runPath(ii,:));
                 end
+
+                % Collect results
+                for ii = 1:nRun
+                    [completedIdx, value] = fetchNext(futures);
+                    roiData(:,:,completedIdx,:) = value;  % assign the 3-jj slice
+                end
+
                 parfevalOnAll(@warning,0,'on','all');
+            end
+
+            % Read one run function
+            function data = processOneRun(filePaths)
+                data = zeros([roiSize, 1, 3]);  % adjust dimensions as needed
+                for kk = 1:3
+                    data(:,:,1,kk) = roi.select(acq.killBadPixel(double(imread(filePaths(kk)))));
+                end
             end
         end
 
@@ -622,7 +649,7 @@ classdef BecExp < Trial
             if isempty(runIdx)
                 return
             elseif obj.IsAcquiring
-                obj.displayLog("Still saving images. Can not delete now.")
+                obj.displayLog("Still saving images. Can not delete now.","warning")
                 return
             end
             obj.displayLog("Deleting Run " + join("#"+string(runIdx),", ") + ".")
@@ -865,14 +892,14 @@ classdef BecExp < Trial
                 pause(tPause)
                 newLogNum = countFileNumber(originPath,".clg") - existedLogNum;
                 if newLogNum>1
-                    obj.displayLog(">1 log files found")
+                    obj.displayLog(">1 log files found","warning")
                     return
                 end
                 t = t + tPause;
             end
 
             if t>= 10
-                obj.displayLog("Can not find a log file in 10 seconds")
+                obj.displayLog("Can not find a log file in 10 seconds","warning")
                 return
             end
 
@@ -898,7 +925,7 @@ classdef BecExp < Trial
             end
 
             if t >= 5
-                obj.displayLog("Can not move the log file in 5 seconds")
+                obj.displayLog("Can not move the log file in 5 seconds","warning")
                 return
             end
 
@@ -1007,7 +1034,11 @@ classdef BecExp < Trial
             end
 
             %% unlock all
-            hwApp.unlock;
+            try
+                hwApp.unlock;
+            catch
+                obj.displayLog("Can not unlock. Please check if phase lock is connected","warning")
+            end
         end
         function updateHardware(obj)
             %UPDATEHARDWARE Summary of this function goes here

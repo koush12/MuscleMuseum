@@ -23,8 +23,8 @@ classdef OpticalLattice < OpticalPotential
     end
 
     properties (Constant)
-        % BandIndexMaxFourierDefault = 101
-        BandIndexMaxFourierDefault = 51
+        BandIndexMaxFourierDefault = 101
+        % BandIndexMaxFourierDefault = 51
     end
 
     properties (Dependent)
@@ -180,7 +180,7 @@ classdef OpticalLattice < OpticalPotential
             obj.Laser.Intensity = abs(v0 / alpha) / 2 / Constants.SI("Z0");
         end
 
-        function [E,Fjn,phi,u] = computeBand1D(obj,q,n,x)
+        function [E,Fjn,phi,u] = computeBand1D(obj,q,n,x,options)
             % Calculate Bloch state for quasimomentum q and band index n.
             % 
             %   q Sampling quasimomentum [p/hbar] in unit of 1/meter.
@@ -200,6 +200,7 @@ classdef OpticalLattice < OpticalPotential
                 q double {mustBeVector} % Sampling quasimomentum [p/hbar] in unit of 1/meter.
                 n double {mustBeVector,mustBeInteger,mustBeNonnegative}
                 x double = []
+                options.nMax = []
             end
             Er = obj.RecoilEnergy;
             v0 = obj.DepthLu; % Dimensionless lattice depth.
@@ -207,7 +208,11 @@ classdef OpticalLattice < OpticalPotential
             lambda = 2 * pi / kL;
             q = q / kL; % Dimensionless quasi-momentum.
             n = n + 1; % For easier indexing.
-            nMax = max(2 * max(n)+49,obj.BandIndexMaxFourierDefault); % Band index cutoff. Making sure its an odd number
+            if isempty(options.nMax)
+                nMax = max(2 * max(n)+49,obj.BandIndexMaxFourierDefault); % Band index cutoff. Making sure its an odd number
+            else
+                nMax = options.nMax;
+            end
             nCenterIdx = round(nMax / 2);
             [~,qCenterIdx] = min(abs(q));
             j = 1-nMax:2:nMax-1;
@@ -765,7 +770,7 @@ classdef OpticalLattice < OpticalPotential
             end
 
             %% Get bands
-            [~,Fjn] = obj.computeBand1D(q,0:(nMax - 49)/2 - 1);
+            [~,Fjn] = obj.computeBand1D(q,0:n,nMax=nMax);
 
             %% Renormalize ucj
             lambda = obj.Laser.Wavelength;
