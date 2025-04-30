@@ -6,6 +6,7 @@ classdef Od < BecAnalysis
         RoiData double % Raw RoiData, including atom/light/dark.
         CameraLightData double % For calculating cross section. Background subtracted. Fringe removed.
         OdData double % Calculated OdData
+        ImageRatio double % Calculated Ratio of post-subtracted Atom and Light Imaging for PCI
     end
 
     properties
@@ -64,6 +65,7 @@ classdef Od < BecAnalysis
             roiSize = obj.BecExp.Roi.CenterSize(3:4);
             obj.RoiData = zeros([roiSize,1,3]);
             obj.OdData = zeros([roiSize,1]);
+            obj.ImageRatio = zeros([roiSize,1]);
             obj.CameraLightData = zeros([roiSize,1]);
 
             obj.Gui(1).initialize(obj.BecExp) % invoke OdPreviewer
@@ -82,6 +84,7 @@ classdef Od < BecAnalysis
 
             % Update OD without fringe removal
             obj.OdData(:,:,runIdx) = absorption2Od(computeAbsorption(obj.RoiData(:,:,runIdx,:)));
+            obj.ImageRatio(:,:, runIdx) = computeAbsorption(obj.RoiData(:,:,runIdx,:));
 
             % Update OdPreviewer
             obj.Gui(1).update;
@@ -128,6 +131,7 @@ classdef Od < BecAnalysis
             light = obj.RoiData(:,:,:,2) - obj.RoiData(:,:,:,3);
             OdBefore = absorption2Od(computeAbsorption(cat(4,atom,light))); % OdBefore fringe removal
             roiSize = obj.BecExp.Roi.CenterSize(3:4);
+            ImageRatioBefore= computeAbsorption(cat(4,atom,light)); % Computes Atom/Light
 
             %% Do fringe romoval if the mask and the method are given
             if (~isempty(obj.FringeRemovalMask)) && obj.FringeRemovalMethod ~= "None"
@@ -146,17 +150,21 @@ classdef Od < BecAnalysis
                         atom = reshape(atom,roiSize(1),roiSize(2),size(atom,2),1);
                         light = reshape(light,roiSize(1),roiSize(2),size(light,2),1);
                         OdAfter = absorption2Od(computeAbsorption(cat(4,atom,light)));
+                        ImageRatioAfter = computeAbsorption(cat(4,atom,light));
                         obj.Gui(2).initialize(OdBefore,OdAfter,Rtest,obj.FringeRemovalMethod)
                     otherwise
                         OdAfter = OdBefore;
+                        ImageRatioAfter = ImageRatioBefore;
                 end
             else
                 OdAfter = OdBefore;
+                ImageRatioAfter = ImageRatioBefore;
             end
 
             %% Update light and Od data after fringe removal
             obj.CameraLightData = light;
             obj.OdData = OdAfter;
+            obj.ImageRatio = ImageRatioAfter;
         end
 
         function plotOdMix(obj)

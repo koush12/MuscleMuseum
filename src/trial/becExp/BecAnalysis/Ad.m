@@ -109,6 +109,64 @@ classdef Ad < BecAnalysis
                 case "UniformStrongLight2"
 
                 case "StrongLight2"
+                    
+                case "PhaseContrastImaging"
+                    %Needs to obtain phase plate for imaging, assume
+                    %phi=pi/2 for now, should be between -pi and pi
+
+                    phi=-pi/3; %Assumes additional thickness, use minus for etched
+                    
+                    freqlistPCI_Imaging=becExp.HardwareData.hw_ImagingPci;
+                    freqPCI_Imaging=freqlistPCI_Imaging(runIdx);
+
+                    switch becExp.Imaging.ImagingStage
+                        case "NI"
+                            freqlist_Imaging=becExp.HardwareData.hw_ImagingNi ;
+                        case "LF" 
+                            freqlist_Imaging=becExp.HardwareData.hw_ImagingLf ;
+                        case "HF"
+                            freqlist_Imaging=becExp.HardwareData.hw_ImagingHf ;
+                    end
+
+                    freq_Imaging=freqlist_Imaging(runIdx);
+                    delta=freq_Imaging-freqPCI_Imaging; %Frequency Detuning (cyclic frequency). Positive means red-detuned for our experiment.
+                    
+                    obj.AdData(:,:,runIdx)=becExp.Od.ImageRatio(:,:,runIdx);
+
+                    %Correct for spots that are outside of the expected
+                    %ratios for the given phase spot plate.
+                    Imin=min((3-2*cos(phi)-4*sin(phi/2)), (3-2*cos(phi)+4*sin(phi/2)));
+                    Imax=max((3-2*cos(phi)-4*sin(phi/2)), (3-2*cos(phi)+4*sin(phi/2)));
+                    obj.AdData(:,:,runIdx)=min(obj.AdData(:,:,runIdx), Imax);
+                    obj.AdData(:,:,runIdx)=max(obj.AdData(:,:,runIdx), Imin);
+
+                    %Calculate phase shift from atoms;
+                    obj.AdData(:,:,runIdx)=phi/2+asin((obj.AdData(:,:,runIdx)-(3-2*cos(phi)))/(4*sin(phi/2)));
+
+                    %Convert phase shift to density (for within range);
+                    %Constants
+                    epsilon0=8.8541878188e-12; %Si units for vacuum permitivity
+                    electroncharge=1.602e-19; %Electron Charge in Coulombs
+                    mLi=1.1649273e-26; %Mass of Li in kg
+                    % alpha=electroncharge^2/(mLi*2*pi*delta*(2*4.46784587e14)); %
+                    a0=5.29177210544e-11; %Bohr radius in m.
+                    
+                    
+
+                    %Calculation based on Steck Quantum Optics
+                    omegaD1 = 2 * pi * becExp.Atom.D1.Frequency;
+                    omegaD2 = 2 * pi * becExp.Atom.D2.Frequency;
+                    omegaL = omegaD2-2*pi*delta;
+                    dipoleD1 = becExp.Atom.D1.ReducedDipoleMatrixElement;% already in SI units, (C*m)
+                    dipoleD2 = becExp.Atom.D2.ReducedDipoleMatrixElement;
+                    hbar = Constants.SI("hbar");
+
+                    alpha = 2/3/hbar * (abs(dipoleD1)^2 / (omegaD1 - omegaL) +...
+                        abs(dipoleD2)^2 / (omegaD2 - omegaL));
+                    
+                    %Final Densities
+                    obj.AdData(:,:,runIdx)=obj.AdData(:,:,runIdx)/(2*pi/(671e-9))*2*epsilon0/alpha;
+                    
             end
 
             % Update AdPreviewer
