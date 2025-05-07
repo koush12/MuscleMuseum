@@ -222,7 +222,39 @@ classdef BecExp < Trial
                 end
 
                 % Update cicero data
-                ciceroData = obj.readCiceroLog(currentRunNumber);
+                [ciceroData, readsuccess] = obj.readCiceroLog(currentRunNumber);
+
+                % Error handling if file cannot be read (should be
+                % double checked before properly using. Deletes latest
+                % images. Need to check step to delete extraneous Cicero Log
+                % File.
+                if ~readsuccess %Error handling when Cicero crashes
+                    obj.displayLog("Failed reading the Cicero data. Deleting the latest images","warning")
+                    dataPrefix = obj.DataPrefix;
+                    badfile= fullfile(obj.CiceroLogPath,dataPrefix + "_" + num2str(runIdx)+".clg");
+                    delete(badfile)
+                    fList = dir(fullfile(obj.DataPath,"*"+obj.DataFormat));
+                    imageList = string({fList.name});
+                    if ~isempty(imageList)
+                        imageNumberList = arrayfun(@(x) str2double(regexp(x,'\d*','match')),imageList);
+                        deleteList = imageList(ismember(imageNumberList,currentRunNumber));
+                        for ii = 1:numel(deleteList)
+                            deleteFile(fullfile(obj.DataPath,deleteList(ii)))
+                        end
+                    end
+                    obj.countExistedLog
+                    obj.IsAcquiring = false;
+                    obj.NCompletedRun = obj.NCompletedRun - 1;
+                    if obj.NCompletedRun > 0
+                        obj.NRun = obj.NCompletedRun;
+                    else
+                        obj.NRun = 1;
+                    end
+                    
+                    return
+                    
+                end
+                
                 if isempty(obj.CiceroData)
                     obj.CiceroData = ciceroData;
                 else
