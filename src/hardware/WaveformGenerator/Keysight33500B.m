@@ -19,7 +19,7 @@ classdef Keysight33500B < KeysightWaveformGenerator
             obj.NChannel = 2;
             obj.IsOutput = [true,true];
             obj.Memory = 16e6;
-            obj.SamplingRate = 250e6;
+            obj.SamplingRate = [250e6,250e6];
             obj.WaveformList = cell(1,obj.NChannel);
         end
             

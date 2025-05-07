@@ -11,6 +11,7 @@ classdef (Abstract) PeriodicWaveform < Waveform
 
     properties (Hidden)
         NCycle double = 10
+        MinimumSampleSize double = 32
     end
 
     properties (Dependent)
@@ -46,6 +47,27 @@ classdef (Abstract) PeriodicWaveform < Waveform
                 nR = 1;
             else
                 nR = floor(obj.NPeriod / obj.NCycle);
+                teC = obj.DurationOneCycle * nR + obj.StartTime - obj.TimeStep;
+                tFunc = obj.TimeFunc;
+                if isa(obj,"ConstantTop")
+                    s = [];
+                elseif abs(obj.EndTime - teC) <= obj.TimeStep
+                    s = [];
+                else
+                    t = (teC + obj.TimeStep) : obj.TimeStep : obj.EndTime;
+                    s = tFunc(t);
+                end
+
+                if ~isempty(s)
+                    if numel(s) < obj.MinimumSampleSize
+                        NPatchCycle = ceil((obj.MinimumSampleSize - numel(s))...
+                            / (obj.DurationOneCycle * obj.SamplingRate));
+                        nR = nR - NPatchCycle;
+                        if nR < 1
+                            nR = 1;
+                        end
+                    end
+                end
             end
         end
 

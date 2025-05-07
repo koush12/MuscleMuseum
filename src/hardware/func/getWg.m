@@ -13,9 +13,11 @@ if ~isempty(wgConfig)
         load("WaveformGeneratorSetting","WaveformGeneratorSetting")
         load("WaveformLibrary.mat","WaveformLibrary")
         setting = WaveformGeneratorSetting(WaveformGeneratorSetting.Name == name,:);
-        wgObj.SamplingRate = setting.SamplingRate;
-        wgObj.TriggerSource = setting.TriggerSource;
-        wgObj.OutputMode = setting.OutputMode;
+        wgObj.SamplingRate = setting.SamplingRate{1};
+        wgObj.TriggerSource = setting.TriggerSource{1};
+        wgObj.TriggerSlope = setting.TriggerSlope{1};
+        wgObj.OutputMode = setting.OutputMode{1};
+        wgObj.OutputLoad = setting.OutputLoad{1};
         wgObj.IsOutput = setting.IsOutput{1};
         wfName = setting.WaveformListName{1};
         for ii = 1:numel(wfName)

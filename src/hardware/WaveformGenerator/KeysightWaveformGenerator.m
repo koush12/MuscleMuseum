@@ -35,22 +35,24 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                 writeline(v,outputStr + " 0") % Stop output
                 writeline(v,sourceStr + ":DATA:VOLatile:CLEar") % Clear volatile memory
                 writeline(v,"FORM:BORD SWAP") % Swaps byte order to LSB
-                writeline(v, sprintf(sourceStr + ':FUNCtion:ARBitrary:SRATe %g MHZ', obj.SamplingRate * 1e-6)); % Sampling rate
+                writeline(v, sprintf(sourceStr + ':FUNCtion:ARBitrary:SRATe %g MHZ', obj.SamplingRate(ii) * 1e-6)); % Sampling rate
                 writeline(v, sprintf(sourceStr + ':VOLTage:HIGH %g', 2.0)); % Voltage high
                 writeline(v, sprintf(sourceStr + ':VOLTage:LOW %g', -2.0)); % Voltage low
                 writeline(v, sprintf(sourceStr + ':VOLTage:OFFset %g', 0)); % Voltage offset
                 writeline(v, sprintf(sourceStr + ':FUNCtion:ARBitrary:PTPeak %g', 1)); % Set arbitray waveform p2p
                 
                 % Trigger source
-                switch obj.TriggerSource
+                switch obj.TriggerSource(ii)
                     case "External"
                         writeline(v, triggerStr + ":SOURce EXT");
-                    case "Internal"
+                    case "Software"
                         writeline(v, triggerStr + ":SOURce BUS");
+                    case "Immediate"
+                        writeline(v, triggerStr + ":SOURce IMM");
                 end
 
                 % Trigger slope
-                switch obj.TriggerSlope
+                switch obj.TriggerSlope(ii)
                     case "Rise"
                         writeline(v, triggerStr + ":SLOPe POS");
                     case "Fall"
@@ -59,7 +61,7 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
 
                 % Output mode
                 if obj.IsOutput(ii)
-                    switch obj.OutputMode
+                    switch obj.OutputMode(ii)
                         case "Normal"
                             writeline(v, outputStr + ':MODE NORMal');
                         case "Gated"
@@ -68,7 +70,7 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                 end
 
                 % Output load
-                switch obj.OutputLoad
+                switch obj.OutputLoad(ii)
                     case "50"
                         writeline(v, outputStr + ':LOAD 50')
                     case "Infinity"
@@ -165,6 +167,21 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                     obj.set
                 end
             end
+        end
+
+        function trigger(obj)
+            %% Check connection to the device
+            obj.check;
+            v = obj.VisaDevice;
+
+            %% Software trigger
+            for ii = 1:obj.NChannel
+                if obj.TriggerSource(ii) == "Software"
+                    triggerStr = "TRIGger" + string(ii);
+                    writeline(v, triggerStr);
+                end
+            end
+
         end
 
         function close(obj)
