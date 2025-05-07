@@ -5,10 +5,10 @@ classdef (Abstract) PartialPeriodicWaveform < Waveform
     properties
         Amplitude double = 0 % Peak-to-peak amplitude, usually in Volts.
         Offset double = 0 % Offest, usually in Volts.
-        Frequency double {mustBePositive} % In Hz
-        Phase double % In radians
-        RiseTime double {mustBeNonnegative} % In s
-        FallTime double {mustBeNonnegative} % In s
+        Frequency double {mustBePositive} = 100 % In Hz
+        Phase double = 0 % In radians
+        RiseTime double {mustBeNonnegative} = 0 % In s
+        FallTime double {mustBeNonnegative} = 0 % In s
     end
 
     properties (Dependent)

@@ -3,8 +3,8 @@ classdef GaussianRandom < RandomWaveform
     %   Detailed explanation goes here
     
     properties
-        Mean double %mu
-        StandardDeviation double %sigma
+        Mean double = 0 %mu
+        StandardDeviation double = 1 %sigma
     end
     
     methods
@@ -14,7 +14,7 @@ classdef GaussianRandom < RandomWaveform
                 options.startTime double = 0;
                 options.duration double = [];
                 options.mean double = [];
-                options.standardDeviation double = 0;
+                options.standardDeviation double = 1;
             end
             field = string(fieldnames(options));
             for ii = 1:numel(field)

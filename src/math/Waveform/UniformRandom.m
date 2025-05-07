@@ -3,8 +3,8 @@ classdef UniformRandom < RandomWaveform
     %   Detailed explanation goes here
     
     properties
-        LowerBound double %mu
-        UpperBound double %sigma
+        LowerBound double = 0 %mu
+        UpperBound double = 1 %sigma
     end
     
     methods

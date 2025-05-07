@@ -5,8 +5,8 @@ classdef (Abstract) ModulatedWaveform < Waveform
     properties
         Amplitude double = 0 % Peak-to-peak amplitude, usually in Volts.
         Offset double = 0 % Offest, usually in Volts.
-        Frequency double {mustBePositive} % In Hz
-        Phase double % In radians
+        Frequency double {mustBePositive} = 100 % In Hz
+        Phase double = 0 % In radians
         AmplitudeModulation WaveformList
         FrequencyModulation WaveformList
         PhaseModulation WaveformList

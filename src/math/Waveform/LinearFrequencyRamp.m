@@ -5,9 +5,9 @@ classdef LinearFrequencyRamp < Waveform
     properties
         Amplitude double = 0 % Peak-to-peak amplitude, usually in Volts.
         Offset double = 0 % Offest, usually in Volts.
-        StartFrequency double {mustBePositive} % Linear frequency in Hz
-        StopFrequency double {mustBePositive} % Linear frequency in Hz
-        Phase double
+        StartFrequency double {mustBePositive} = 10 % Linear frequency in Hz
+        StopFrequency double {mustBePositive} = 100 % Linear frequency in Hz
+        Phase double = 0
     end
     
     methods

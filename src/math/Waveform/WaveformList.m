@@ -226,16 +226,33 @@ classdef WaveformList < handle
             func = @(t) timeFunc(t);
         end
 
-        function plot(obj)
-            dt = obj.TimeStep;
-            sample = obj.Sample;
-            time = 0:(numel(sample)-1);
-            time = time * dt;
-            figure(14739)
-            plot(time,sample)
-            xlabel("Time [s]",'Interpreter','latex')
-            ylabel("Waveform Sample",'Interpreter','latex')
-            render
+        function plot(obj,ax)
+            arguments
+                obj WaveformList
+                ax = []
+            end
+            
+            if isempty(obj.WaveformOrigin)
+                time = 0;
+                sample = 0;
+            else
+                dt = obj.TimeStep;
+                sample = obj.Sample;
+                time = 0:(numel(sample)-1);
+                time = time * dt;
+            end
+
+            if isempty(ax)
+                figure(14739)
+                plot(time,sample)
+                xlabel("Time [s]",'Interpreter','latex')
+                ylabel("Waveform Sample",'Interpreter','latex')
+                render
+            else
+                plot(ax,time,sample,'LineWidth',1.5);
+                xlabel(ax,"Time [s]",'Interpreter','latex')
+                ylabel(ax,"Waveform Sample",'Interpreter','latex')
+            end
         end
 
         function set.SamplingRate(obj,val)
