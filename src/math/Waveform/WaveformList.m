@@ -205,12 +205,14 @@ classdef WaveformList < handle
             end
 
             %% Construct waveform time function handle
+            tShift = zeros(1,nWave);
             if obj.ConcatMethod == "Sequential"
-                ti = obj.WaveformOrigin{1}.StartTime;
+                ti = 0;
                 dt = obj.TimeStep;
+                tShift(1) = - obj.WaveformOrigin{1}.StartTime;
                 for ii = 2:nWave
                     ti = ti + obj.WaveformOrigin{ii-1}.Duration + dt;
-                    obj.WaveformOrigin{ii}.StartTime = ti;
+                    tShift(ii) = ti - obj.WaveformOrigin{ii}.StartTime;
                 end
             end
             funcList = cell(1,nWave);
@@ -220,7 +222,7 @@ classdef WaveformList < handle
             function out = timeFunc(t)
                 out = 0;
                 for jj = 1:nWave
-                    out = out + funcList{jj}(t);
+                    out = out + funcList{jj}(t - tShift(jj));
                 end
             end
             func = @(t) timeFunc(t);
