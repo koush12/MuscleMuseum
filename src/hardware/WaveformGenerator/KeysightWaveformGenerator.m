@@ -96,7 +96,7 @@ classdef (Abstract) KeysightWaveformGenerator < WaveformGenerator
                 end
 
                 %% Add begining and ending zero waveforms for triggering
-                obj.WaveformList{ii}.SamplingRate = obj.SamplingRate;
+                obj.WaveformList{ii}.SamplingRate = obj.SamplingRate(ii);
                 t = obj.WaveformList{ii}.WaveformPrepared;
                 Sample = {zeros(1,35)};
                 PlayMode = "OnceWaitTrigger";

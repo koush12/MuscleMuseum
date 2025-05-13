@@ -5,7 +5,7 @@ classdef (Abstract) Waveform < handle
     properties
         SamplingRate double {mustBePositive} = 1 % In Hz
         StartTime double = 0 % Start time, in s
-        Duration double {mustBePositive} = 0.1 % How long of the waveform, in s
+        Duration double {mustBeNonnegative} = 0.1 % How long of the waveform, in s
         Scan table = table(string.empty,string.empty, 'VariableNames',{'ParameterName','VariableName'}) % For scanning in Hardware control
     end
 
