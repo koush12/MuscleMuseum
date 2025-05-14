@@ -222,7 +222,40 @@ classdef BecExp < Trial
                 end
 
                 % Update cicero data
-                ciceroData = obj.readCiceroLog(currentRunNumber);
+                [ciceroData, readsuccess] = obj.readCiceroLog(currentRunNumber);
+
+                % Error handling if file cannot be read (should be
+                % double checked before properly using. Deletes latest
+                % images. Need to check step to delete extraneous Cicero Log
+                % File.
+                if ~readsuccess %Error handling when Cicero log file gets corrupted.
+                    obj.displayLog("Failed reading the Cicero data. Deleting the latest images","warning")
+                    dataPrefix = obj.DataPrefix;
+                    badfile= fullfile(obj.CiceroLogPath,dataPrefix) + "_" + num2str(currentRunNumber)+".clg";
+                    disp(badfile);
+                    delete(badfile)
+                    fList = dir(fullfile(obj.DataPath,"*"+obj.DataFormat));
+                    imageList = string({fList.name});
+                    if ~isempty(imageList)
+                        imageNumberList = arrayfun(@(x) str2double(regexp(x,'\d*','match')),imageList);
+                        deleteList = imageList(ismember(imageNumberList,currentRunNumber));
+                        for ii = 1:numel(deleteList)
+                            deleteFile(fullfile(obj.DataPath,deleteList(ii)))
+                        end
+                    end
+                    obj.countExistedLog
+                    obj.IsAcquiring = false;
+                    obj.NCompletedRun = obj.NCompletedRun - 1;
+                    if obj.NCompletedRun > 0
+                        obj.NRun = obj.NCompletedRun;
+                    else
+                        obj.NRun = 1;
+                    end
+                    
+                    return
+                    
+                end
+                
                 if isempty(obj.CiceroData)
                     obj.CiceroData = ciceroData;
                 else
@@ -839,41 +872,49 @@ classdef BecExp < Trial
             obj.ExistedHardwareLogNumber = arrayfun(@countFileNumber,obj.HardwareList.DataPath);
         end
 
-        function sData = readCiceroLog(obj,runIdx)
-            runIdx = string(runIdx(:));
-            logName = fullfile(obj.CiceroLogPath,obj.DataPrefix) + "_" + runIdx ...
-                + ".clg";
-            dataStructuresLibrary=[matlabroot '\bin\win64\DataStructures.dll'];
-            ds=NET.addAssembly(dataStructuresLibrary);
-            import ds.*
-            serializer=System.Runtime.Serialization.Formatters.Binary.BinaryFormatter;
-            sData=struct;
-            for ii = 1:numel(runIdx)
-                inputstream=System.IO.FileStream(logName(ii),...
-                    System.IO.FileMode.Open,System.IO.FileAccess.Read,System.IO.FileShare.Read);
-                ret_obj=serializer.Deserialize(inputstream);
-                for kk=1:ret_obj.RunSequence.Variables.Count
-                    thisvar=Item(ret_obj.RunSequence.Variables,kk-1);
-                    variable_name=strrep(char(thisvar.VariableName), ' ', '');
-                    variable_value=double(thisvar.VariableValue);
-                    if ii > 1
-                        sData.(variable_name)=[sData.(variable_name),variable_value];
-                    else
-                        sData.(variable_name)=variable_value;
+        function [sData, readsuccess] = readCiceroLog(obj,runIdx)
+            readsuccess=false;
+            try
+                runIdx = string(runIdx(:));
+                logName = fullfile(obj.CiceroLogPath,obj.DataPrefix) + "_" + runIdx ...
+                    + ".clg";
+                dataStructuresLibrary=[matlabroot '\bin\win64\DataStructures.dll'];
+                ds=NET.addAssembly(dataStructuresLibrary);
+                import ds.*
+                serializer=System.Runtime.Serialization.Formatters.Binary.BinaryFormatter;
+                sData=struct;
+                for ii = 1:numel(runIdx)
+                    inputstream=System.IO.FileStream(logName(ii),...
+                        System.IO.FileMode.Open,System.IO.FileAccess.Read,System.IO.FileShare.Read);
+                    ret_obj=serializer.Deserialize(inputstream);
+                    for kk=1:ret_obj.RunSequence.Variables.Count
+                        thisvar=Item(ret_obj.RunSequence.Variables,kk-1);
+                        variable_name=strrep(char(thisvar.VariableName), ' ', '');
+                        variable_value=double(thisvar.VariableValue);
+                        if ii > 1
+                            sData.(variable_name)=[sData.(variable_name),variable_value];
+                        else
+                            sData.(variable_name)=variable_value;
+                        end
                     end
+                    % for kk=1:ret_obj.RunSettings.PermanentVariables.Count
+                    %     thisvar=Item(ret_obj.RunSequence.Variables,kk-1);
+                    %     variable_name=strrep(char(thisvar.VariableName), ' ', '');
+                    %     variable_value=double(thisvar.VariableValue);
+                    %     if ii > 1
+                    %         sData.(variable_name)=[sData.(variable_name),variable_value];
+                    %     else
+                    %         sData.(variable_name)=variable_value;
+                    %     end
+                    % end
+    
+                    inputstream.Close %Need to be closed otherwise we can not delete the log file if we want
                 end
-                % for kk=1:ret_obj.RunSettings.PermanentVariables.Count
-                %     thisvar=Item(ret_obj.RunSequence.Variables,kk-1);
-                %     variable_name=strrep(char(thisvar.VariableName), ' ', '');
-                %     variable_value=double(thisvar.VariableValue);
-                %     if ii > 1
-                %         sData.(variable_name)=[sData.(variable_name),variable_value];
-                %     else
-                %         sData.(variable_name)=variable_value;
-                %     end
-                % end
-
-                inputstream.Close %Need to be closed otherwise we can not delete the log file if we want
+                readsuccess=true;
+            catch
+                inputstream.Close
+                sData=struct;
+                sData=false;
             end
         end
 
