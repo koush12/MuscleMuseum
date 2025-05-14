@@ -228,10 +228,11 @@ classdef BecExp < Trial
                 % double checked before properly using. Deletes latest
                 % images. Need to check step to delete extraneous Cicero Log
                 % File.
-                if ~readsuccess %Error handling when Cicero crashes
+                if ~readsuccess %Error handling when Cicero log file gets corrupted.
                     obj.displayLog("Failed reading the Cicero data. Deleting the latest images","warning")
                     dataPrefix = obj.DataPrefix;
-                    badfile= fullfile(obj.CiceroLogPath,dataPrefix + "_" + num2str(runIdx)+".clg");
+                    badfile= fullfile(obj.CiceroLogPath,dataPrefix) + "_" + num2str(currentRunNumber)+".clg";
+                    disp(badfile);
                     delete(badfile)
                     fList = dir(fullfile(obj.DataPath,"*"+obj.DataFormat));
                     imageList = string({fList.name});
@@ -911,6 +912,7 @@ classdef BecExp < Trial
                 end
                 readsuccess=true;
             catch
+                inputstream.Close
                 sData=struct;
                 sData=false;
             end
