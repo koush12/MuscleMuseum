@@ -53,10 +53,6 @@ classdef DensityFit < BecAnalysis
             obj.DensityLimX = [0,1];
             obj.DensityLimY = [0,1];
 
-            %% Initialize plots
-            obj.Gui(1).initialize(becExp)
-            fig = obj.Chart(1).initialize;
-
             %% Initialize data
             obj.ThermalCloudCenter = zeros(2,1,nSub);
             obj.ThermalCloudSize = zeros(2,1,nSub);
@@ -74,6 +70,10 @@ classdef DensityFit < BecAnalysis
                     obj.FitData = BosonicGaussianFit1D([1,1]);
             end
             obj.FitData = repmat(obj.FitData,2,1,nSub);
+
+            %% Initialize plots
+            obj.Gui(1).initialize(becExp)
+            fig = obj.Chart(1).initialize;
 
             %% Initialize cloud size plots
             if ~ishandle(fig)
