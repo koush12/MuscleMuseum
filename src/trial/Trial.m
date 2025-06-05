@@ -132,7 +132,7 @@ classdef (Abstract) Trial < handle & matlab.mixin.SetGetExactNames & dynamicprop
             obj.updateDatabase
 
             fid = fopen(fullfile(obj.DataPath, "description.txt"), 'wt' );
-            fprintf(fid,'\n%s',obj.Description);
+            fprintf(fid,'\n%s',obj.Description, strcat('Trial #', num2str(obj.SerialNumber)));
             fclose(fid);
         end
 
