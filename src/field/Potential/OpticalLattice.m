@@ -24,7 +24,7 @@ classdef OpticalLattice < OpticalPotential
 
     properties (Constant)
         BandIndexMaxFourierDefault = 101
-        % BandIndexMaxFourierDefault = 51
+        % BandIndexMaxFourierDefault = 54
     end
 
     properties (Dependent)
@@ -824,16 +824,16 @@ classdef OpticalLattice < OpticalPotential
                 n1 double {mustBeVector,mustBeInteger,mustBeNonnegative}
                 n2 double {mustBeVector,mustBeInteger,mustBeNonnegative}
             end
-            if obj.BandIndexMax < max(n1,n2)
-                nq = 2^12;
+            % if obj.BandIndexMax < max(n1,n2)
+                nq = 2^10;
                 kL = obj.Laser.AngularWavenumber;
                 q = linspace(-kL,kL,nq+1);
                 q(end) = [];
                 E = obj.computeBand1D(q,0:max([n1,n2]));
-            else
-                E = obj.BandEnergy;
-                q = obj.QuasiMomentumList;
-            end
+            % else
+                % E = obj.BandEnergy;
+                % q = obj.QuasiMomentumList;
+            % end
 
             qIdx = q<=0;
             q = q(qIdx);
@@ -841,7 +841,7 @@ classdef OpticalLattice < OpticalPotential
             dE = abs(E(n2+1,:) - E(n1+1,:));
             bandDist = max(dE);
             bandGap = min(dE);
-            tol = bandDist / 1e8;
+            tol = bandDist / 1e6;
             qRes = zeros(1,numel(freq));
             for ii = 1:numel(freq)
                 if freq(ii) > bandDist || freq(ii) < bandGap
@@ -874,6 +874,56 @@ classdef OpticalLattice < OpticalPotential
 
 
         end
+        function qRes = computeTransitionQuasiMomentumFast1D(obj,freq,n1,n2)
+            % Compute transition quasi-momentum between Bloch states for specific freq.
+            % q: Quasimomentum [p/hbar] in unit of 1/meter. q can be a 1 * N array
+            % n1: The band index 1. Start from zero. So n = 0 means the s band.
+            % n2: The band index 2.
+            % freq: The transition frequencies. If q is an array, freq is also an
+            % array with the same size.
+            arguments
+                obj OpticalLattice
+                freq double {mustBeVector}
+                n1 double {mustBeVector,mustBeInteger,mustBeNonnegative}
+                n2 double {mustBeVector,mustBeInteger,mustBeNonnegative}
+            end
+            % if obj.BandIndexMax < max(n1,n2)
+                nq = 2^10;
+                kL = obj.Laser.AngularWavenumber;
+                q = linspace(-kL,kL,nq+1);
+                q(end) = [];
+                E = obj.computeBand1D(q,0:max([n1,n2]));
+            % else
+                % E = obj.BandEnergy;
+                % q = obj.QuasiMomentumList;
+            % end
+
+            qIdx = q<=0;
+            q = q(qIdx);
+            dq = q(2) - q(1);
+            E = E(:,qIdx);
+            deltaE = abs(E(n2+1,:) - E(n1+1,:));
+            bandDist = max(deltaE);
+            bandGap = min(deltaE);
+            qRes = zeros(1,numel(freq));
+            for ii = 1:numel(freq)
+                if freq(ii) > bandDist || freq(ii) < bandGap
+                    qRes(ii) = NaN;
+                else
+                    [~,resIdx] = sort(abs(freq(ii) - deltaE));
+                    resIdx = resIdx(1:2);
+                    q1 = q(resIdx(1));
+                    q2 = q(resIdx(2));
+                    qResTemp = (q1 + q2) / 2;
+                    dEdq = gradient(deltaE,dq);
+                    dEdq = (dEdq(resIdx(1)) + dEdq(resIdx(2)))/2;
+                    deltaE0 = (deltaE(resIdx(1)) + deltaE(resIdx(2)))/2;
+                    
+                    qRes(ii) = (freq(ii) - deltaE0)/dEdq + qResTemp;
+                end
+            end
+            qRes = -qRes;
+        end
 
         function computeAll1D(obj,nq,n)
             %COMPUTEALL1D Summary of this function goes here
@@ -893,8 +943,8 @@ classdef OpticalLattice < OpticalPotential
             obj.BandIndexMaxFourier = size(Fjn,1);
             obj.BandEnergy = E;
             obj.BlochStateFourier = Fjn;
-            obj.AmpModCoupling = obj.computeAmpModCoupling1D;
-            obj.BerryConnection = obj.computeBerryConnection1D;
+            % obj.AmpModCoupling = obj.computeAmpModCoupling1D;
+            % obj.BerryConnection = obj.computeBerryConnection1D;
             % obj.removeGauge;
             % obj.BerryConnection = obj.computeBerryConnection1D;
 
