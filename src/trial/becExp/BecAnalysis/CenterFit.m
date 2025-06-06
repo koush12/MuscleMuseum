@@ -1,6 +1,57 @@
 classdef CenterFit < BecAnalysis
-    %OD Summary of this class goes here
-    %   Detailed explanation goes here
+    %CENTERFIT CenterFit object used to handle fitting and plotting of
+    %cloud centers over scanned variable in experiment. Currently not
+    %written to handle multiple subrois
+    %Properties:
+    %   FitMethod - String denoting selection of fitting method used
+    %   FitDataThermal - Array of FitData1D objects used to generate a fit
+    %   of the collected data. Currently consistently of two Fit1D arrays,
+    %   one for x and one for y. Grabs the data from the BecExp.DensityFit
+    %   objects and grabbing the thermalcloudcenter coordinates
+    %   FitDataCondensate - Array of FitData1D objects used for fitting
+    %   condensate center. Currently not being used.
+    %   IsSaveCenter - Logic used to determine whether to save this dataset
+    %   as a plot or not.
+    %
+    %   The following parameters depend on the selected fits:
+    %   ThermalCloudCenterMean - Mean of Cloud center positions
+    %   ThermalCloudCenterRange - Range of Cloud center positions
+    %   ThermalCloudCenterSlope - Slope of Cloud center position fit
+    %   ThermalCloudCenterAcceleration - Acceleration derived from cloud
+    %   center position
+    %   ThermalCloudCenterSloshAmplitude - Amplitude of slosh from cloud
+    %   center position
+    %   ThermalCloudCenterSloshOffset - Offset of slosh from cloud center
+    %   position fit
+    %   ThermalCloudCenterSloshFrequency - Slosh frequency from cloud
+    %   center position fit.
+    %
+    %   Following parameters are not being used/updated:
+    %   CondensateCenterMean
+    %   CondensateCenterRange
+    %   CondensateCenterSlope
+    %   CondensateCenterAcceleration
+    %   CondensateCenterSloshAmplitude
+    %   CondensateCenterSloshOffset
+    %   CondensateCenterSloshFrequency
+    %
+    %   ThermalXLine - Errorbar plot used in plot for x axis
+    %   ThermalXFitLine - Corresponding fitted line for plot for x axis
+    %   ThermalYLine - Errorbar plot used in plot for y axis
+    %   ThermalYFitLine - Corresponding fitted line for plot for y axis
+    %   ParaTable - Table in plot used to list out fitted parameters
+    %   MinimumFitNumber - Threshold length of datapoints used to determine whether the
+    %   Centerfit object shows or not.
+    %
+    %Methods:
+    %   CenterFit(becExp)
+    %   initialize(obj)
+    %   updateData(obj,~)
+    %   updateFigure(obj,~)
+    %   refresh(obj)
+    %   save(obj)
+    %   overwriteStartPoint(params)
+    %   getParamList()
 
     properties
         FitMethod = "LinearFit1D"
@@ -462,6 +513,38 @@ classdef CenterFit < BecAnalysis
                 save(which("CloudCenterData.mat"),"CloudCenter")
             end
         end
+
+        function overwriteStartPoint(obj, paramsx, paramsy)
+            if ismember(obj.FitDataThermal(1), "FitDataOverride")
+                obj.FitDataThermal(1).StartPoint=paramsx;
+                obj.FitDataThermal(2).StartPoint=paramsy;
+
+            else
+                obj.BecExp.displayLog("Fit not overridable","warning")
+            end
+        end
+
+        function [listx, listy]=getParamList(obj)
+            if ismember(obj.FitDataThermal(1), "FitDataOverride")
+                listx=obj.FitDataThermal(1).StartPoint;
+                listy=obj.FitDataThermal(2).StartPoint;
+            else
+                obj.BecExp.displayLog("Fit not overridable","warning")
+            end
+
+        
+         
+        end
+        function [listx, listy]=getParamStartPoint(obj)
+            if ismember(obj.FitDataThermal(1), "FitDataOverride")
+                listx=obj.FitDataThermal(1).StartPoint;
+                listy=obj.FitDataThermal(2).StartPoint;
+            else
+                obj.BecExp.displayLog("Fit not overridable","warning")
+            end
+            
+        end
+
     end
 end
 

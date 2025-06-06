@@ -1,4 +1,4 @@
-classdef SineFit1D < FitData1D
+classdef SineFit1D < FitData1D & FitDataOverride
     %GAUSSIANFIT1D Summary of this class goes here
     %   Detailed explanation goes here
 
