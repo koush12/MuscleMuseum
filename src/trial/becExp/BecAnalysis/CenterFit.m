@@ -58,6 +58,7 @@ classdef CenterFit < BecAnalysis
         FitDataThermal
         FitDataCondensate
         IsSaveCenter logical = false
+        MinimumFitNumber = 1 %analyzing old code was breaking because MinimumFitNumber became empty when opening old datasets
     end
 
     properties (SetAccess = protected)
@@ -83,7 +84,10 @@ classdef CenterFit < BecAnalysis
         ThermalYLine
         ThermalYFitLine
         ParaTable
-        MinimumFitNumber
+        
+        Override
+        Overridevalsx
+        Overridevalsy
     end
 
     methods
@@ -128,6 +132,7 @@ classdef CenterFit < BecAnalysis
             obj.CondensateCenterSloshFrequency = [0;0];
             obj.FitDataThermal = [];
             obj.FitDataCondensate = [];
+            obj.Override=0;
 
             %% Initialize plots
             fig = obj.Chart(1).initialize;
@@ -363,6 +368,10 @@ classdef CenterFit < BecAnalysis
                                     obj.FitDataThermal = ...
                                         [SineFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(1,:).']);...
                                          SineFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(2,:).'])];
+                                    if obj.Override
+                                        obj.FitDataThermal(1).StartPoint=obj.Overridevalsx;
+                                        obj.FitDataThermal(2).StartPoint=obj.Overridevalsy;
+                                    end
                                     obj.FitDataThermal(1).do;
                                     obj.FitDataThermal(2).do;
                                     obj.ThermalCloudCenterSloshAmplitude = ...
@@ -515,9 +524,11 @@ classdef CenterFit < BecAnalysis
         end
 
         function overwriteStartPoint(obj, paramsx, paramsy)
-            if ismember(obj.FitDataThermal(1), "FitDataOverride")
-                obj.FitDataThermal(1).StartPoint=paramsx;
-                obj.FitDataThermal(2).StartPoint=paramsy;
+            if isa(obj.FitDataThermal(1), "FitDataOverride")
+                obj.Overridevalsx=paramsx;
+                obj.Overridevalsy=paramsy;
+                obj.Override=1;
+
 
             else
                 obj.BecExp.displayLog("Fit not overridable","warning")
@@ -525,7 +536,7 @@ classdef CenterFit < BecAnalysis
         end
 
         function [listx, listy]=getParamList(obj)
-            if ismember(obj.FitDataThermal(1), "FitDataOverride")
+            if isa(obj.FitDataThermal(1), "FitDataOverride")
                 listx=obj.FitDataThermal(1).StartPoint;
                 listy=obj.FitDataThermal(2).StartPoint;
             else
@@ -536,9 +547,10 @@ classdef CenterFit < BecAnalysis
          
         end
         function [listx, listy]=getParamStartPoint(obj)
-            if ismember(obj.FitDataThermal(1), "FitDataOverride")
+            if isa(obj.FitDataThermal(1), "FitDataOverride")
                 listx=obj.FitDataThermal(1).StartPoint;
                 listy=obj.FitDataThermal(2).StartPoint;
+                obj.Override=1;
             else
                 obj.BecExp.displayLog("Fit not overridable","warning")
             end
