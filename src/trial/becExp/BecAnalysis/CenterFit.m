@@ -14,8 +14,8 @@ classdef CenterFit < BecAnalysis
     %   as a plot or not.
     %
     %   The following parameters depend on the selected fits:
-    %   ThermalCloudCenterMean - Mean of Cloud center positions
-    %   ThermalCloudCenterRange - Range of Cloud center positions
+    %   ThermalCloudCenterMean - Mean of Cloud center positions (units m)
+    %   ThermalCloudCenterRange - Range of Cloud center positions (units m)
     %   ThermalCloudCenterSlope - Slope of Cloud center position fit
     %   ThermalCloudCenterAcceleration - Acceleration derived from cloud
     %   center position
@@ -102,6 +102,7 @@ classdef CenterFit < BecAnalysis
                 loc = [0.3919,0.032],...
                 size = [0.3069,0.57]...
                 );
+                obj.Override=0;
         end
 
         function initialize(obj)
@@ -132,7 +133,7 @@ classdef CenterFit < BecAnalysis
             obj.CondensateCenterSloshFrequency = [0;0];
             obj.FitDataThermal = [];
             obj.FitDataCondensate = [];
-            obj.Override=0;
+            
 
             %% Initialize plots
             fig = obj.Chart(1).initialize;
@@ -537,8 +538,14 @@ classdef CenterFit < BecAnalysis
 
         function [listx, listy]=getParamList(obj)
             if isa(obj.FitDataThermal(1), "FitDataOverride")
-                listx=obj.FitDataThermal(1).StartPoint;
-                listy=obj.FitDataThermal(2).StartPoint;
+                listx=obj.FitDataThermal(1).ParamList;
+                listy=obj.FitDataThermal(2).ParamList;
+                if isempty(listx) %An issue with opening new datasets
+                    listx=coeffnames(obj.FitDataThermal(1).Func);
+                end
+                if isempty(listy)
+                    listy=coeffnames(obj.FitDataThermal(2).Func);
+                end
             else
                 obj.BecExp.displayLog("Fit not overridable","warning")
             end
