@@ -1,12 +1,64 @@
 classdef CenterFit < BecAnalysis
-    %OD Summary of this class goes here
-    %   Detailed explanation goes here
+    %CENTERFIT CenterFit object used to handle fitting and plotting of
+    %cloud centers over scanned variable in experiment. Currently not
+    %written to handle multiple subrois
+    %Properties:
+    %   FitMethod - String denoting selection of fitting method used
+    %   FitDataThermal - Array of FitData1D objects used to generate a fit
+    %   of the collected data. Currently consistently of two Fit1D arrays,
+    %   one for x and one for y. Grabs the data from the BecExp.DensityFit
+    %   objects and grabbing the thermalcloudcenter coordinates
+    %   FitDataCondensate - Array of FitData1D objects used for fitting
+    %   condensate center. Currently not being used.
+    %   IsSaveCenter - Logic used to determine whether to save this dataset
+    %   as a plot or not.
+    %
+    %   The following parameters depend on the selected fits:
+    %   ThermalCloudCenterMean - Mean of Cloud center positions (units m)
+    %   ThermalCloudCenterRange - Range of Cloud center positions (units m)
+    %   ThermalCloudCenterSlope - Slope of Cloud center position fit
+    %   ThermalCloudCenterAcceleration - Acceleration derived from cloud
+    %   center position
+    %   ThermalCloudCenterSloshAmplitude - Amplitude of slosh from cloud
+    %   center position
+    %   ThermalCloudCenterSloshOffset - Offset of slosh from cloud center
+    %   position fit
+    %   ThermalCloudCenterSloshFrequency - Slosh frequency from cloud
+    %   center position fit.
+    %
+    %   Following parameters are not being used/updated:
+    %   CondensateCenterMean
+    %   CondensateCenterRange
+    %   CondensateCenterSlope
+    %   CondensateCenterAcceleration
+    %   CondensateCenterSloshAmplitude
+    %   CondensateCenterSloshOffset
+    %   CondensateCenterSloshFrequency
+    %
+    %   ThermalXLine - Errorbar plot used in plot for x axis
+    %   ThermalXFitLine - Corresponding fitted line for plot for x axis
+    %   ThermalYLine - Errorbar plot used in plot for y axis
+    %   ThermalYFitLine - Corresponding fitted line for plot for y axis
+    %   ParaTable - Table in plot used to list out fitted parameters
+    %   MinimumFitNumber - Threshold length of datapoints used to determine whether the
+    %   Centerfit object shows or not.
+    %
+    %Methods:
+    %   CenterFit(becExp)
+    %   initialize(obj)
+    %   updateData(obj,~)
+    %   updateFigure(obj,~)
+    %   refresh(obj)
+    %   save(obj)
+    %   overwriteStartPoint(params)
+    %   getParamList()
 
     properties
         FitMethod = "LinearFit1D"
         FitDataThermal
         FitDataCondensate
         IsSaveCenter logical = false
+        MinimumFitNumber = 1 %analyzing old code was breaking because MinimumFitNumber became empty when opening old datasets
     end
 
     properties (SetAccess = protected)
@@ -32,7 +84,10 @@ classdef CenterFit < BecAnalysis
         ThermalYLine
         ThermalYFitLine
         ParaTable
-        MinimumFitNumber
+        
+        Override
+        Overridevalsx
+        Overridevalsy
     end
 
     methods
@@ -47,6 +102,7 @@ classdef CenterFit < BecAnalysis
                 loc = [0.3919,0.032],...
                 size = [0.3069,0.57]...
                 );
+                obj.Override=0;
         end
 
         function initialize(obj)
@@ -77,6 +133,7 @@ classdef CenterFit < BecAnalysis
             obj.CondensateCenterSloshFrequency = [0;0];
             obj.FitDataThermal = [];
             obj.FitDataCondensate = [];
+            
 
             %% Initialize plots
             fig = obj.Chart(1).initialize;
@@ -312,6 +369,10 @@ classdef CenterFit < BecAnalysis
                                     obj.FitDataThermal = ...
                                         [SineFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(1,:).']);...
                                          SineFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(2,:).'])];
+                                    if obj.Override
+                                        obj.FitDataThermal(1).StartPoint=obj.Overridevalsx;
+                                        obj.FitDataThermal(2).StartPoint=obj.Overridevalsy;
+                                    end
                                     obj.FitDataThermal(1).do;
                                     obj.FitDataThermal(2).do;
                                     obj.ThermalCloudCenterSloshAmplitude = ...
@@ -462,6 +523,47 @@ classdef CenterFit < BecAnalysis
                 save(which("CloudCenterData.mat"),"CloudCenter")
             end
         end
+
+        function overwriteStartPoint(obj, paramsx, paramsy)
+            if isa(obj.FitDataThermal(1), "FitDataOverride")
+                obj.Overridevalsx=paramsx;
+                obj.Overridevalsy=paramsy;
+                obj.Override=1;
+
+
+            else
+                obj.BecExp.displayLog("Fit not overridable","warning")
+            end
+        end
+
+        function [listx, listy]=getParamList(obj)
+            if isa(obj.FitDataThermal(1), "FitDataOverride")
+                listx=obj.FitDataThermal(1).ParamList;
+                listy=obj.FitDataThermal(2).ParamList;
+                if isempty(listx) %An issue with opening new datasets
+                    listx=coeffnames(obj.FitDataThermal(1).Func);
+                end
+                if isempty(listy)
+                    listy=coeffnames(obj.FitDataThermal(2).Func);
+                end
+            else
+                obj.BecExp.displayLog("Fit not overridable","warning")
+            end
+
+        
+         
+        end
+        function [listx, listy]=getParamStartPoint(obj)
+            if isa(obj.FitDataThermal(1), "FitDataOverride")
+                listx=obj.FitDataThermal(1).StartPoint;
+                listy=obj.FitDataThermal(2).StartPoint;
+                obj.Override=1;
+            else
+                obj.BecExp.displayLog("Fit not overridable","warning")
+            end
+            
+        end
+
     end
 end
 

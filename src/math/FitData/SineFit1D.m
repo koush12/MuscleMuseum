@@ -1,4 +1,4 @@
-classdef SineFit1D < FitData1D
+classdef SineFit1D < FitData1D & FitDataOverride
     %GAUSSIANFIT1D Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -38,7 +38,8 @@ classdef SineFit1D < FitData1D
             obj.StartPoint = [guessAmplitude,guessFrequency,guessPhase,guessOffset];
             obj.Lower = [0.5 * guessAmplitude, guessFrequency / 5, 0, guessOffset - 0.3 * guessAmplitude];
             obj.Upper = [2 * guessAmplitude, 5 * guessFrequency, 2 * pi, guessOffset + 0.3 * guessAmplitude];
-
+            obj.ParamList={'Amp A', 'frequency f', 'phase phi', 'Offset C'};
+            disp(obj.ParamList)
         end
 
     end
