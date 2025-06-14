@@ -1,20 +1,29 @@
 classdef (Abstract) FitData1D < FitData
     %FIT1D Summary of this class goes here
     %   Detailed explanation goes here
-    
-    properties
-        RawData % n * 2 array
-    end
 
     properties (Dependent)
-        FitPlotData % n * 2 array
+        FitPlotData (:,2) double % n * 2 array
+        DataSize (1,1) double
     end
     
     methods
         function obj = FitData1D(rawData)
             %FIT1D Construct an instance of this class
             %   Detailed explanation goes here
-            obj.RawData = rawData;
+            obj@FitData(rawData)
+        end
+
+        function output = checkData(obj,rawData)
+            if isempty(rawData)
+                output = [];
+            elseif ~ismatrix(rawData)
+                error("Fit raw data must be a n * 2 matrix.")
+            elseif size(rawData,2) ~= 2
+                error("Fit raw data must be a n * 2 matrix.")
+            else
+                output = rawData;
+            end
         end
 
         function fpData = get.FitPlotData(obj)
@@ -23,8 +32,12 @@ classdef (Abstract) FitData1D < FitData
                 return
             end
             xFit = linspace(min(obj.RawData(:,1)),max(obj.RawData(:,1)),1000).';
-            yFit = feval(obj.Result,xFit);
+            yFit = obj.evaluateFit(xFit);
             fpData = [xFit,yFit];
+        end
+
+        function dataSize = get.DataSize(obj)
+            dataSize = size(obj.RawData,1);
         end
 
         function obj = do(obj)
@@ -34,6 +47,14 @@ classdef (Abstract) FitData1D < FitData
             obj.Coefficient = coeffvalues(fitResult);
         end
 
+        function y = evaluateFit(obj,x)
+            if isempty(obj.Result)
+                y = [];
+            else
+                y = feval(obj.Result,x);
+            end
+        end
+        
         function plot(obj,targetAxes,isRender)
             arguments
                 obj FitData1D

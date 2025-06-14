@@ -84,10 +84,6 @@ classdef CenterFit < BecAnalysis
         ThermalYLine
         ThermalYFitLine
         ParaTable
-        
-        Override
-        Overridevalsx
-        Overridevalsy
     end
 
     methods
@@ -102,7 +98,6 @@ classdef CenterFit < BecAnalysis
                 loc = [0.3919,0.032],...
                 size = [0.3069,0.57]...
                 );
-                obj.Override=0;
         end
 
         function initialize(obj)
@@ -131,9 +126,30 @@ classdef CenterFit < BecAnalysis
             obj.CondensateCenterSloshAmplitude = [0;0];
             obj.CondensateCenterSloshOffset = [0;0];
             obj.CondensateCenterSloshFrequency = [0;0];
-            obj.FitDataThermal = [];
-            obj.FitDataCondensate = [];
-            
+
+            %% Initialize fit
+            thermalTemp = obj.FitDataThermal;
+            condensateTemp = obj.FitDataCondensate;
+            obj.FitDataThermal = eval(obj.FitMethod + "([0,0])");
+            obj.FitDataCondensate = eval(obj.FitMethod + "([0,0])");
+            obj.FitDataThermal(2) = eval(obj.FitMethod + "([0,0])");
+            obj.FitDataCondensate(2) = eval(obj.FitMethod + "([0,0])");
+            nameList = ["StartPoint","Lower","Upper"] + "Override";
+            nameList = [nameList,"IsOverride"];
+            if ~isempty(thermalTemp)
+                for xx = 1:2
+                    for nn = 1:numel(nameList)
+                        obj.FitDataThermal(xx).(nameList(nn)) = thermalTemp(xx).(nameList(nn));
+                    end
+                end
+            end
+            if ~isempty(condensateTemp)
+                for xx = 1:2
+                    for nn = 1:numel(nameList)
+                        obj.FitDataCondensate(xx).(nameList(nn)) = condensateTemp(xx).(nameList(nn));
+                    end
+                end
+            end
 
             %% Initialize plots
             fig = obj.Chart(1).initialize;
@@ -208,7 +224,7 @@ classdef CenterFit < BecAnalysis
                 hold(ax1,'off')
                 hold(ax2,'off')
             end
-            
+
             %% Initialize table
             if ishandle(fig)
                 %% Initialize table data
@@ -300,7 +316,7 @@ classdef CenterFit < BecAnalysis
                                     data{10,3} = '1/VarUnit';
                                 end
                         end
-                    
+
                     case "BimodalFit1D"
                         %% Thermal and condensate fit
                 end
@@ -343,69 +359,61 @@ classdef CenterFit < BecAnalysis
                         switch obj.FitMethod
                             case "LinearFit1D"
                                 %% Linear Fit
-                                    obj.FitDataThermal = ...
-                                        [LinearFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(1,:).']);...
-                                        LinearFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(2,:).'])];
-                                    obj.FitDataThermal(1).do;
-                                    obj.FitDataThermal(2).do;
-                                    obj.ThermalCloudCenterSlope = ...
-                                        [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
+                                for xx = 1:2
+                                    obj.FitDataThermal(xx).RawData = [paraList,becExp.DensityFit.ThermalCloudCenter(xx,:).'];
+                                    obj.FitDataThermal(xx).do;
+                                end
+                                obj.ThermalCloudCenterSlope = ...
+                                    [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
                             case "ParabolicFit1D"
                                 %% Parabolic Fit
-                                    obj.FitDataThermal = ...
-                                        [ParabolicFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(1,:).']);...
-                                        ParabolicFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(2,:).'])];
-                                    obj.FitDataThermal(1).do;
-                                    obj.FitDataThermal(2).do;
-                                    if isTimeUnit(becExp.ScannedParameterUnit)
-                                        obj.ThermalCloudCenterAcceleration = ...
-                                            1 / (tUnit^2) * 2 * [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
-                                    else
-                                        obj.ThermalCloudCenterAcceleration = ...
-                                            2 * [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
-                                    end
+                                for xx = 1:2
+                                    obj.FitDataThermal(xx).RawData = [paraList,becExp.DensityFit.ThermalCloudCenter(xx,:).'];
+                                    obj.FitDataThermal(xx).do;
+                                end
+                                if isTimeUnit(becExp.ScannedParameterUnit)
+                                    obj.ThermalCloudCenterAcceleration = ...
+                                        1 / (tUnit^2) * 2 * [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
+                                else
+                                    obj.ThermalCloudCenterAcceleration = ...
+                                        2 * [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
+                                end
                             case "SineFit1D"
                                 %% Sine Fit
-                                    obj.FitDataThermal = ...
-                                        [SineFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(1,:).']);...
-                                         SineFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(2,:).'])];
-                                    if obj.Override
-                                        obj.FitDataThermal(1).StartPoint=obj.Overridevalsx;
-                                        obj.FitDataThermal(2).StartPoint=obj.Overridevalsy;
-                                    end
-                                    obj.FitDataThermal(1).do;
-                                    obj.FitDataThermal(2).do;
-                                    obj.ThermalCloudCenterSloshAmplitude = ...
-                                        [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
-                                    obj.ThermalCloudCenterSloshOffset = ...
-                                        [obj.FitDataThermal(1).Coefficient(4);obj.FitDataThermal(2).Coefficient(4)];
-                                    if isTimeUnit(becExp.ScannedParameterUnit)
-                                        obj.ThermalCloudCenterSloshFrequency = ...
-                                            1 / tUnit * [obj.FitDataThermal(1).Coefficient(2);obj.FitDataThermal(2).Coefficient(2)];
-                                    else
-                                        obj.ThermalCloudCenterSloshFrequency = ...
-                                            [obj.FitDataThermal(1).Coefficient(2);obj.FitDataThermal(2).Coefficient(2)];
-                                    end
+                                for xx = 1:2
+                                    obj.FitDataThermal(xx).RawData = [paraList,becExp.DensityFit.ThermalCloudCenter(xx,:).'];
+                                    obj.FitDataThermal(xx).do;
+                                end
+                                obj.ThermalCloudCenterSloshAmplitude = ...
+                                    [obj.FitDataThermal(1).Coefficient(1);obj.FitDataThermal(2).Coefficient(1)];
+                                obj.ThermalCloudCenterSloshOffset = ...
+                                    [obj.FitDataThermal(1).Coefficient(4);obj.FitDataThermal(2).Coefficient(4)];
+                                if isTimeUnit(becExp.ScannedParameterUnit)
+                                    obj.ThermalCloudCenterSloshFrequency = ...
+                                        1 / tUnit * [obj.FitDataThermal(1).Coefficient(2);obj.FitDataThermal(2).Coefficient(2)];
+                                else
+                                    obj.ThermalCloudCenterSloshFrequency = ...
+                                        [obj.FitDataThermal(1).Coefficient(2);obj.FitDataThermal(2).Coefficient(2)];
+                                end
                             case "TriangleFit1D"
                                 %% Sine Fit
-                                    obj.FitDataThermal = ...
-                                        [TriangleFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(1,:).']);...
-                                         TriangleFit1D([paraList,becExp.DensityFit.ThermalCloudCenter(2,:).'])];
-                                    obj.FitDataThermal(1).do;
-                                    obj.FitDataThermal(2).do;
-                                    obj.ThermalCloudCenterSloshAmplitude = ...
-                                        [(obj.FitDataThermal(1).Coefficient(1) - obj.FitDataThermal(1).Coefficient(2))/2;...
-                                        (obj.FitDataThermal(2).Coefficient(1) - obj.FitDataThermal(2).Coefficient(2))/2];
-                                    obj.ThermalCloudCenterSloshOffset = ...
-                                        [(obj.FitDataThermal(1).Coefficient(1) + obj.FitDataThermal(1).Coefficient(2))/2;...
-                                        (obj.FitDataThermal(2).Coefficient(1) + obj.FitDataThermal(2).Coefficient(2))/2];
-                                    if isTimeUnit(becExp.ScannedParameterUnit)
-                                        obj.ThermalCloudCenterSloshFrequency = ...
-                                            1 ./ tUnit ./ [obj.FitDataThermal(1).Coefficient(4);obj.FitDataThermal(2).Coefficient(4)];
-                                    else
-                                        obj.ThermalCloudCenterSloshFrequency = ...
-                                            1 ./ [obj.FitDataThermal(1).Coefficient(4);obj.FitDataThermal(2).Coefficient(4)];
-                                    end
+                                for xx = 1:2
+                                    obj.FitDataThermal(xx).RawData = [paraList,becExp.DensityFit.ThermalCloudCenter(xx,:).'];
+                                    obj.FitDataThermal(xx).do;
+                                end
+                                obj.ThermalCloudCenterSloshAmplitude = ...
+                                    [(obj.FitDataThermal(1).Coefficient(1) - obj.FitDataThermal(1).Coefficient(2))/2;...
+                                    (obj.FitDataThermal(2).Coefficient(1) - obj.FitDataThermal(2).Coefficient(2))/2];
+                                obj.ThermalCloudCenterSloshOffset = ...
+                                    [(obj.FitDataThermal(1).Coefficient(1) + obj.FitDataThermal(1).Coefficient(2))/2;...
+                                    (obj.FitDataThermal(2).Coefficient(1) + obj.FitDataThermal(2).Coefficient(2))/2];
+                                if isTimeUnit(becExp.ScannedParameterUnit)
+                                    obj.ThermalCloudCenterSloshFrequency = ...
+                                        1 ./ tUnit ./ [obj.FitDataThermal(1).Coefficient(4);obj.FitDataThermal(2).Coefficient(4)];
+                                else
+                                    obj.ThermalCloudCenterSloshFrequency = ...
+                                        1 ./ [obj.FitDataThermal(1).Coefficient(4);obj.FitDataThermal(2).Coefficient(4)];
+                                end
                         end
                     end
                 case "BimodalFit1D"
@@ -430,12 +438,12 @@ classdef CenterFit < BecAnalysis
                     obj.ParaTable.Data{2,2} = num2str(obj.ThermalCloudCenterMean(2)/px,'%.2f');
                     obj.ParaTable.Data{3,2} = num2str(obj.ThermalCloudCenterRange(1)/px,'%.2f');
                     obj.ParaTable.Data{4,2} = num2str(obj.ThermalCloudCenterRange(2)/px,'%.2f');
-                    if becExp.NCompletedRun >= 1 && becExp.NCompletedRun < obj.MinimumFitNumber 
+                    if becExp.NCompletedRun >= 1 && becExp.NCompletedRun < obj.MinimumFitNumber
                         obj.ThermalXLine.XData = obj.BecExp.ScannedParameterList;
                         obj.ThermalXLine.YData = obj.BecExp.DensityFit.ThermalCloudCenter(1,:) / px;
                         obj.ThermalYLine.XData = obj.BecExp.ScannedParameterList;
                         obj.ThermalYLine.YData = obj.BecExp.DensityFit.ThermalCloudCenter(2,:) / px;
-                    elseif becExp.NCompletedRun >= obj.MinimumFitNumber 
+                    elseif becExp.NCompletedRun >= obj.MinimumFitNumber
                         rawXT = obj.FitDataThermal(1).RawData;
                         rawYT = obj.FitDataThermal(2).RawData;
                         [xRawXT,yRawXT,stdRawXT] = computeStd(rawXT(:,1),rawXT(:,2) / px, becExp.AveragingMethod);
@@ -460,8 +468,8 @@ classdef CenterFit < BecAnalysis
 
                         switch obj.FitMethod
                             case "LinearFit1D"
-                                    obj.ParaTable.Data{5,2} = num2str(obj.ThermalCloudCenterSlope(1)/px);
-                                    obj.ParaTable.Data{6,2} = num2str(obj.ThermalCloudCenterSlope(2)/px);
+                                obj.ParaTable.Data{5,2} = num2str(obj.ThermalCloudCenterSlope(1)/px);
+                                obj.ParaTable.Data{6,2} = num2str(obj.ThermalCloudCenterSlope(2)/px);
                             case "ParabolicFit1D"
                                 if isTimeUnit(becExp.ScannedParameterUnit)
                                     obj.ParaTable.Data{5,2} = num2str(obj.ThermalCloudCenterAcceleration(1));
@@ -471,12 +479,12 @@ classdef CenterFit < BecAnalysis
                                     obj.ParaTable.Data{6,2} = num2str(obj.ThermalCloudCenterAcceleration(2)/px);
                                 end
                             case {"SineFit1D","TriangleFit1D"}
-                                    obj.ParaTable.Data{5,2} = num2str(obj.ThermalCloudCenterSloshAmplitude(1)/px);
-                                    obj.ParaTable.Data{6,2} = num2str(obj.ThermalCloudCenterSloshAmplitude(2)/px);
-                                    obj.ParaTable.Data{7,2} = num2str(obj.ThermalCloudCenterSloshOffset(1)/px);
-                                    obj.ParaTable.Data{8,2} = num2str(obj.ThermalCloudCenterSloshOffset(2)/px);
-                                    obj.ParaTable.Data{9,2} = num2str(obj.ThermalCloudCenterSloshFrequency(1));
-                                    obj.ParaTable.Data{10,2} = num2str(obj.ThermalCloudCenterSloshFrequency(2));
+                                obj.ParaTable.Data{5,2} = num2str(obj.ThermalCloudCenterSloshAmplitude(1)/px);
+                                obj.ParaTable.Data{6,2} = num2str(obj.ThermalCloudCenterSloshAmplitude(2)/px);
+                                obj.ParaTable.Data{7,2} = num2str(obj.ThermalCloudCenterSloshOffset(1)/px);
+                                obj.ParaTable.Data{8,2} = num2str(obj.ThermalCloudCenterSloshOffset(2)/px);
+                                obj.ParaTable.Data{9,2} = num2str(obj.ThermalCloudCenterSloshFrequency(1));
+                                obj.ParaTable.Data{10,2} = num2str(obj.ThermalCloudCenterSloshFrequency(2));
                         end
                     end
                 case "BimodalFit1D"
@@ -510,7 +518,7 @@ classdef CenterFit < BecAnalysis
                 px = becExp.Acquisition.PixelSizeReal;
                 switch becExp.DensityFit.FitMethod
                     case {"GaussianFit1D","BosonicGaussianFit1D"}
-                        Center = obj.ThermalCloudCenterMean; 
+                        Center = obj.ThermalCloudCenterMean;
                 end
                 Center = reshape(flip(Center),1,2) / px; % Use ROI coordinates convention.
                 Center = becExp.Roi.full2NoRotationFull(Center); % Convert to no-rotation full coordinates
@@ -522,46 +530,6 @@ classdef CenterFit < BecAnalysis
                 end
                 save(which("CloudCenterData.mat"),"CloudCenter")
             end
-        end
-
-        function overwriteStartPoint(obj, paramsx, paramsy)
-            if isa(obj.FitDataThermal(1), "FitDataOverride")
-                obj.Overridevalsx=paramsx;
-                obj.Overridevalsy=paramsy;
-                obj.Override=1;
-
-
-            else
-                obj.BecExp.displayLog("Fit not overridable","warning")
-            end
-        end
-
-        function [listx, listy]=getParamList(obj)
-            if isa(obj.FitDataThermal(1), "FitDataOverride")
-                listx=obj.FitDataThermal(1).ParamList;
-                listy=obj.FitDataThermal(2).ParamList;
-                if isempty(listx) %An issue with opening new datasets
-                    listx=coeffnames(obj.FitDataThermal(1).Func);
-                end
-                if isempty(listy)
-                    listy=coeffnames(obj.FitDataThermal(2).Func);
-                end
-            else
-                obj.BecExp.displayLog("Fit not overridable","warning")
-            end
-
-        
-         
-        end
-        function [listx, listy]=getParamStartPoint(obj)
-            if isa(obj.FitDataThermal(1), "FitDataOverride")
-                listx=obj.FitDataThermal(1).StartPoint;
-                listy=obj.FitDataThermal(2).StartPoint;
-                obj.Override=1;
-            else
-                obj.BecExp.displayLog("Fit not overridable","warning")
-            end
-            
         end
 
     end
