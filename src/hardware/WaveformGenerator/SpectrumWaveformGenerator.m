@@ -51,19 +51,22 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             obj.check;
 
             %% Set sampling rate
-            [success,obj.Device] = spcMSetupClockPLL(obj.Device, obj.SamplingRate, 0);
+            [success,obj.Device] = spcMSetupClockPLL(obj.Device, obj.SamplingRate(1), 0);
             if (success == false)
                 obj.closeSpec
                 spcMErrorMessageStdOut(obj.Device, 'Error: spcMSetupClockPLL:\n\t', true);
                 return;
             end
-            obj.SamplingRate = obj.Device.setSamplerate;
+            sr = obj.Device.setSamplerate;
+            obj.SamplingRate(:) = deal(sr);
 
             %% Set triggering
-            switch obj.TriggerSource
+            switch obj.TriggerSource(1)
                 case "External"
                     [~,obj.Device] = spcMSetupTrigExternal(obj.Device, obj.RegMap('SPC_TM_POS'), 0, 0, 1, 0); 
                 case "Immediate"
+                    [~,obj.Device] = spcMSetupTrigSoftware(obj.Device, 0);
+                otherwise
                     [~,obj.Device] = spcMSetupTrigSoftware(obj.Device, 0);
             end
 
@@ -119,7 +122,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
             %% Load prepared waveforms
             t = cell(1,nEnabledChannel);
             for ii = 1:nEnabledChannel
-                obj.WaveformList{enabledChannel(ii)}.SamplingRate = obj.SamplingRate;
+                obj.WaveformList{enabledChannel(ii)}.SamplingRate = obj.SamplingRate(1);
                 obj.WaveformList{enabledChannel(ii)}.NCycle = NaN; % For spectrum AWG, we don't want to split a periodic waveform into parts and upload
                 t{ii} = obj.WaveformList{enabledChannel(ii)}.WaveformPrepared; % Load the prepared waveforms
             end
@@ -142,7 +145,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                 for jj = 1:(nWave-1)
                     amp(ii) = max(amp(ii),max(abs(t{ii}.Sample{jj})));
                 end
-                if obj.OutputLoad == "50"
+                if obj.OutputLoad(ii) == "50"
                     oLim = obj.OutputLimit;
                 else
                     oLim = obj.OutputLimit * 2;
@@ -153,7 +156,7 @@ classdef (Abstract) SpectrumWaveformGenerator < WaveformGenerator
                 elseif amp(ii) < oLim(1)
                     amp(ii) = oLim(1);
                 end
-                if obj.OutputLoad == "50"
+                if obj.OutputLoad(ii) == "50"
                     [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, enabledChannel(ii)-1, amp(ii)*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
                 else
                     [~,obj.Device] = spcMSetupAnalogOutputChannel(obj.Device, enabledChannel(ii)-1, amp(ii)/2*1e3, 0, 0, obj.RegMap('SPCM_STOPLVL_ZERO'), 0, 0);
