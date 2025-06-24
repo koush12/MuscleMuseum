@@ -189,9 +189,11 @@ for n = 1:height(data)
                 tCell{ii} = "{"+regexprep(num2str(tCell{ii}),'\s+',',')+"}";
             elseif isa(tCell{ii},"string")
                 tCell{ii} = "{" + strjoin(arrayfun(@(x) """" + x + """",tCell{ii}),",") + "}";
+                tCell{ii} = strrep(tCell{ii},"'","''");
             end
         else
             tCell{ii} = string(tCell{ii});
+            tCell{ii} = strrep(tCell{ii},"'","''");
         end
     end
     tCellStr = string(tCell);
