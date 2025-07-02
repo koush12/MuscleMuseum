@@ -19,7 +19,7 @@ classdef SineWaveModulated < ModulatedWaveform
                 options.frequency double = [];
                 options.phase double = 0;
 
-                options.amplitudeModuation = []; 
+                options.amplitudeModulation = []; 
                 options.frequencyModulation = [];
                 options.phaseModulation = [];
             end

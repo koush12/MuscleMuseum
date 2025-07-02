@@ -770,7 +770,7 @@ classdef OpticalLattice < OpticalPotential
             end
 
             %% Get bands
-            [~,Fjn] = obj.computeBand1D(q,0:n,nMax=nMax);
+            [~,Fjn] = obj.computeBand1D(q,0:max(n),nMax=nMax);
 
             %% Renormalize ucj
             lambda = obj.Laser.Wavelength;
@@ -943,10 +943,10 @@ classdef OpticalLattice < OpticalPotential
             obj.BandIndexMaxFourier = size(Fjn,1);
             obj.BandEnergy = E;
             obj.BlochStateFourier = Fjn;
-            % obj.AmpModCoupling = obj.computeAmpModCoupling1D;
-            % obj.BerryConnection = obj.computeBerryConnection1D;
-            % obj.removeGauge;
-            % obj.BerryConnection = obj.computeBerryConnection1D;
+            obj.AmpModCoupling = obj.computeAmpModCoupling1D;
+            obj.BerryConnection = obj.computeBerryConnection1D;
+            obj.removeGauge;
+            obj.BerryConnection = obj.computeBerryConnection1D;
 
 
         end
