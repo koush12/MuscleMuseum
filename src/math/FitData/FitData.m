@@ -70,6 +70,18 @@ classdef (Abstract) FitData < handle
                     option.MaxFunEvals = obj.MaxFunEvals;
                     option.MaxIter = obj.MaxIter;
                 end
+
+                % validate options
+                if any(option.Upper < option.Lower)
+                    idx = option.Upper < option.Lower;
+                    temp = option.Upper(idx);
+                    option.Upper(idx) = option.Lower(idx);
+                    option.Lower(idx) = temp;
+                end
+                if any((option.StartPoint < option.Lower) | (option.StartPoint > option.Upper))
+                    idx = (option.StartPoint < option.Lower) | (option.StartPoint > option.Upper);
+                    option.StartPoint(idx) = (option.Lower(idx) + option.Upper(idx)) / 2;
+                end
             end
         end
 
