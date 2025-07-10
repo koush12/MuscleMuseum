@@ -18,7 +18,7 @@ classdef GaussianFit1D < FitData1D
                 'coefficients', {'A', 'x0', 'sigma','C'});
         end
 
-        function setData(obj)
+        function guessCoefficient(obj)
             if isempty(obj.DataSize) || obj.DataSize < obj.MinimumDataSize
                 return
             end
