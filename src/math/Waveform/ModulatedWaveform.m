@@ -23,19 +23,19 @@ classdef (Abstract) ModulatedWaveform < Waveform
                 obj.AmplitudeModulation.SamplingRate = obj.SamplingRate;
                 ampMod = obj.AmplitudeModulation.TimeFunc;
             else
-                ampMod = @(t) 0;
+                ampMod = @(t) zeros(size(t));
             end
             if ~isempty(obj.FrequencyModulation)
                 obj.FrequencyModulation.SamplingRate = obj.SamplingRate;
                 freqMod = obj.FrequencyModulation.TimeFunc;
             else
-                freqMod = @(t) 0;
+                freqMod = @(t) zeros(size(t));
             end
             if ~isempty(obj.PhaseModulation)
                 obj.PhaseModulation.SamplingRate = obj.SamplingRate;
                 phaseMod = obj.PhaseModulation.TimeFunc;
             else
-                phaseMod = @(t) 0;
+                phaseMod = @(t) zeros(size(t));
             end
         end
     end

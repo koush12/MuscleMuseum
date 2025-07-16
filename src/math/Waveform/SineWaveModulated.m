@@ -44,8 +44,8 @@ classdef SineWaveModulated < ModulatedWaveform
 
             func = @tFunc;
             function waveOut = tFunc(t)
-                waveOut = (t>=t0 & t<=(t0+td)) .* ...
-                    ((amp+ampMod(t-t0)) ./2 .* sin(2 * pi .* (freq+freqMod(t-t0)) .* (t-t0) + (phi+phaseMod(t-t0))) + offset);
+                waveOut = (t>=t0 & t<=(t0+td)) .* ((amp+ampMod(t-t0)) ./2 .* ...
+                    sin(2 * pi .* (freq .* (t-t0) + cumtrapz(t-t0,freqMod(t-t0))) + (phi+phaseMod(t-t0))) + offset);
             end
         end
     end
