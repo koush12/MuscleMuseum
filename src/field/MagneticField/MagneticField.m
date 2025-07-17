@@ -3,9 +3,9 @@ classdef MagneticField
     %   Detailed explanation goes here
 
     properties
-        Bias double = zeros(3,1) %In Tesla.
-        Gradient double = zeros(3,3) %[dBx/dx,dBx/dy,dBx/dz;dBy/dx,dBy/dy,dBy/dz;dBz/dx,dBz/dy,dBz/dz]. %In Tesla/meter
-        Quadratic double = zeros(3,3,3) %not implemented.
+        Bias (3,1) double = zeros(3,1) %In Tesla.
+        Gradient (3,3) double = zeros(3,3) %[dBx/dx,dBx/dy,dBx/dz;dBy/dx,dBy/dy,dBy/dz;dBz/dx,dBz/dy,dBz/dz]. %In Tesla/meter
+        Quadratic (3,3,3) double = zeros(3,3,3) %not implemented.
         ArbitraryDistribution function_handle
     end
 
