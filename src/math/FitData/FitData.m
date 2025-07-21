@@ -43,6 +43,9 @@ classdef (Abstract) FitData < handle
             coffSize = size(obj.CoefficientName);
             if ~isempty(obj.Func)
                 option = fitoptions(obj.Func);
+                if isa(option,'curvefit.llsqoptions')
+                    return
+                end
 
                 if obj.IsOverride && ~isempty(obj.StartPointOverride)...
                         && all(size(obj.StartPointOverride) == coffSize)
