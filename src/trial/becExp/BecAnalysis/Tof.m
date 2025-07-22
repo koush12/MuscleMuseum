@@ -13,6 +13,7 @@ classdef Tof < BecAnalysis
         TrappingFrequency double %[omega_x;omega_y]
         ThermalCloudSizeInSitu double
         ThermalCloudCentralDensityInSitu double
+        PhaseSpaceDensity double
     end
 
     properties (Hidden,Transient)
@@ -26,6 +27,7 @@ classdef Tof < BecAnalysis
         CondensateYFitLine
         ParaTable
         kBoverM
+        lambdaDBPrefator
     end
 
     methods
@@ -65,7 +67,10 @@ classdef Tof < BecAnalysis
             obj.FitDataThermal = LinearFit1D([1,1]);
             obj.FitDataThermal = repmat(obj.FitDataThermal,2,1);
             obj.TofTime = 0;
-            obj.kBoverM = Constants.SI("kB") / obj.BecExp.Atom.mass;
+            m = obj.BecExp.Atom.mass;
+            kB = Constants.SI("kB");
+            obj.kBoverM = kB/m;
+            obj.lambdaDBPrefator = Constants.SI("hbar") * sqrt(2 * pi / m / kB);
 
             %% Initialize plots
             fig = obj.Chart(1).initialize;
@@ -108,6 +113,9 @@ classdef Tof < BecAnalysis
             data{6,1} = 'Trapping frequency in y';
             data{6,2} = '';
             data{6,3} = 'Hz';
+            data{7,1} = 'Maximum Phase Space Density';
+            data{7,2} = '';
+            data{7,3} = '';
 
             obj.ParaTable.Data = data;
             obj.ParaTable.FontSize = 12;
@@ -173,6 +181,10 @@ classdef Tof < BecAnalysis
             obj.ThermalCloudSizeInSitu = sqrt([obj.FitDataThermal(1).Coefficient(2);obj.FitDataThermal(2).Coefficient(2)]);
             obj.ThermalCloudCentralDensityInSitu = max(becExp.AtomNumber.Thermal) / ...
                 pi / prod(obj.ThermalCloudSizeInSitu) / boseFunction(1,3) * boseFunction(1,2);
+            lambdaDB = obj.lambdaDBPrefator * sqrt(1./obj.Temperature);
+            sigma = sqrt(prod(obj.ThermalCloudSizeInSitu));
+            n3D = obj.ThermalCloudCentralDensityInSitu / sigma / sqrt(2 * pi) / boseFunction(1,2);
+            obj.PhaseSpaceDensity = n3D * lambdaDB^3;
         end
 
         function updateFigure(obj,~)
@@ -205,6 +217,7 @@ classdef Tof < BecAnalysis
                     obj.ParaTable.Data{4,2} = obj.ThermalCloudCentralDensityInSitu;
                     obj.ParaTable.Data{5,2} = obj.TrappingFrequency(1);
                     obj.ParaTable.Data{6,2} = obj.TrappingFrequency(2);
+                    obj.ParaTable.Data{7,2} = obj.PhaseSpaceDensity;
             end
             lg = findobj(fig,"Type","Legend");
             lg.Location = "best";
